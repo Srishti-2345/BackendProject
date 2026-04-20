@@ -123,6 +123,14 @@ export const submitChallenge = async (req, res, next) => {
     });
     const result = execution.passed ? "accepted" : "wrong_answer";
 
+    const publicCount = challenge.publicTestCases.length;
+    const publicResults = execution.results.slice(0, publicCount);
+    const hiddenResults = execution.results.slice(publicCount);
+    const hiddenSummary = {
+      total: hiddenResults.length,
+      passed: hiddenResults.filter((item) => item.passed).length,
+    };
+
     const submission = await Submission.create({
       challenge: challenge._id,
       user: req.user._id,
@@ -168,8 +176,10 @@ export const submitChallenge = async (req, res, next) => {
       xpAwarded,
       execution: {
         passed: execution.passed,
-        results: execution.results.slice(0, challenge.publicTestCases.length),
+        results: publicResults,
       },
+      hiddenSummary,
+      hiddenResults: execution.passed ? hiddenResults : [],
     });
   } catch (error) {
     next(error);

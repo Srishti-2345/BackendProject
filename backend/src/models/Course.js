@@ -15,6 +15,23 @@ const lessonSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    contentType: {
+      type: String,
+      enum: ["video", "article"],
+      default: "video",
+    },
+    articleBody: {
+      type: String,
+      default: "",
+    },
+    articleUrl: {
+      type: String,
+      default: "",
+    },
+    resources: {
+      type: [String],
+      default: [],
+    },
     isPreview: {
       type: Boolean,
       default: false,

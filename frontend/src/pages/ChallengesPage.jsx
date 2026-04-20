@@ -14,11 +14,12 @@ const ChallengesPage = () => {
   const [difficulty, setDifficulty] = useState("");
   const [activeChallengeId, setActiveChallengeId] = useState(null);
   const [editorState, setEditorState] = useState({});
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(null);
   const [runResult, setRunResult] = useState(null);
   const [submitResult, setSubmitResult] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [submissionLoading, setSubmissionLoading] = useState(false);
+  const [historyOpenFor, setHistoryOpenFor] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const loadChallenges = async (currentDifficulty = "") => {
@@ -94,9 +95,15 @@ const ChallengesPage = () => {
       });
       setRunResult(data.execution);
       setSubmitResult(null);
-      setMessage(data.execution.passed ? "All visible test cases passed." : "Some test cases failed.");
+      setMessage({
+        tone: data.execution.passed ? "success-note" : "error-note",
+        text: data.execution.passed ? "All visible test cases passed." : "Some visible test cases failed.",
+      });
     } catch (error) {
-      setMessage(error.response?.data?.message || "Could not run code");
+      setMessage({
+        tone: "error-note",
+        text: error.response?.data?.message || "Could not run code",
+      });
       setRunResult(null);
     }
   };
@@ -113,15 +120,30 @@ const ChallengesPage = () => {
       });
       setSubmitResult(data);
       setRunResult(data.execution);
-      setMessage(
-        data.submission.result === "accepted"
-          ? `Challenge accepted. XP awarded: ${data.xpAwarded}`
-          : "Submission failed hidden or visible checks."
-      );
-      setSubmissions((current) => [data.submission, ...current]);
+      setMessage({
+        tone: data.submission.result === "accepted" ? "success-note" : "error-note",
+        text:
+          data.submission.result === "accepted"
+            ? `Correct answer. XP awarded: ${data.xpAwarded}. Hidden tests: ${data.hiddenSummary.passed}/${data.hiddenSummary.total} passed.`
+            : `Wrong answer. Hidden tests: ${data.hiddenSummary.passed}/${data.hiddenSummary.total} passed.`,
+      });
+
+      // Only add to local history if we're looking at the same challenge's history list.
+      if (activeChallengeId === data.submission.challenge) {
+        setSubmissions((current) => [data.submission, ...current]);
+      }
+
+      // If history modal is open for this challenge, refresh it so timestamps/results stay accurate.
+      if (historyOpenFor === activeChallenge._id) {
+        await loadSubmissions(activeChallenge._id);
+      }
+
       await loadChallenges(difficulty);
     } catch (error) {
-      setMessage(error.response?.data?.message || "Could not submit challenge");
+      setMessage({
+        tone: "error-note",
+        text: error.response?.data?.message || "Could not submit challenge",
+      });
       setSubmitResult(null);
     }
   };
@@ -146,7 +168,7 @@ const ChallengesPage = () => {
         </div>
       </div>
 
-      {message ? <div className="success-note">{message}</div> : null}
+      {message ? <div className={message.tone}>{message.text}</div> : null}
 
       <div className="challenge-workbench">
         <aside className="challenge-list panel">
@@ -156,9 +178,8 @@ const ChallengesPage = () => {
               <div className="state-card compact">Loading challenges...</div>
             ) : (
               challenges.map((challenge) => (
-                <button
+                <div
                   key={challenge._id}
-                  type="button"
                   className={`challenge-list-item ${
                     activeChallengeId === challenge._id ? "challenge-list-item-active" : ""
                   }`}
@@ -167,13 +188,28 @@ const ChallengesPage = () => {
                     setRunResult(null);
                     setSubmitResult(null);
                     setSubmissions([]);
-                    setMessage("");
+                    setMessage(null);
                   }}
                 >
-                  <span className="badge">{challenge.difficulty}</span>
+                  <div className="challenge-list-row">
+                    <span className="badge">{challenge.difficulty}</span>
+                    <button
+                      type="button"
+                      className="tiny-button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setHistoryOpenFor(challenge._id);
+                        loadSubmissions(challenge._id).catch(console.error);
+                      }}
+                      disabled={!user}
+                      title={user ? "View submissions" : "Login to view submissions"}
+                    >
+                      History
+                    </button>
+                  </div>
                   <strong>{challenge.title}</strong>
                   <span>{challenge.topicSlug}</span>
-                </button>
+                </div>
               ))
             )}
           </div>
@@ -285,39 +321,25 @@ const ChallengesPage = () => {
                     </div>
                   </div>
                 ) : null}
-              </section>
 
-              <section className="panel challenge-submissions-panel">
-                <div className="challenge-editor-head">
-                  <div>
-                    <span className="eyebrow">Submission history</span>
-                    <h3>Your submissions</h3>
-                  </div>
-                </div>
-
-                {!user ? (
-                  <div className="state-card compact">Login to save and review submissions.</div>
-                ) : submissionLoading ? (
-                  <div className="state-card compact">Loading submissions...</div>
-                ) : submissions.length ? (
-                  <div className="submission-stack">
-                    {submissions.map((submission) => (
-                      <article className="submission-card" key={submission._id}>
-                        <div className="meta-row">
-                          <strong>{submission.result.replaceAll("_", " ")}</strong>
-                          <span>{new Date(submission.createdAt).toLocaleString()}</span>
+                {submitResult?.submission?.result === "accepted" && submitResult.hiddenResults?.length ? (
+                  <div className="challenge-block">
+                    <h4>Hidden test cases passed</h4>
+                    <div className="testcase-stack">
+                      {submitResult.hiddenResults.map((result) => (
+                        <div
+                          key={`${activeChallenge._id}-hidden-${result.index}`}
+                          className="testcase-card testcase-pass"
+                        >
+                          <strong>Hidden case passed</strong>
+                          <p>Input: {JSON.stringify(result.input)}</p>
+                          <p>Expected: {JSON.stringify(result.expectedOutput)}</p>
+                          <p>Actual: {JSON.stringify(result.actualOutput)}</p>
                         </div>
-                        <p>Language: {submission.language}</p>
-                        <p>Score: {submission.score}</p>
-                        <pre>{submission.code}</pre>
-                      </article>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                ) : (
-                  <div className="state-card compact">
-                    No submissions yet for this challenge. Submit your code to see it here.
-                  </div>
-                )}
+                ) : null}
               </section>
             </>
           ) : (
@@ -325,6 +347,48 @@ const ChallengesPage = () => {
           )}
         </div>
       </div>
+
+      {historyOpenFor ? (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={() => setHistoryOpenFor(null)}
+        >
+          <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <div>
+                <span className="eyebrow">Submission history</span>
+                <h3>Your submissions</h3>
+              </div>
+              <button className="ghost-button" type="button" onClick={() => setHistoryOpenFor(null)}>
+                Close
+              </button>
+            </div>
+
+            {!user ? (
+              <div className="state-card compact">Login to save and review submissions.</div>
+            ) : submissionLoading ? (
+              <div className="state-card compact">Loading submissions...</div>
+            ) : submissions.length ? (
+              <div className="submission-stack">
+                {submissions.map((submission) => (
+                  <article className="submission-card" key={submission._id}>
+                    <div className="meta-row">
+                      <strong>{submission.result.replaceAll("_", " ")}</strong>
+                      <span>{new Date(submission.createdAt).toLocaleString()}</span>
+                    </div>
+                    <pre>{submission.code}</pre>
+                  </article>
+                ))}
+              </div>
+            ) : (
+              <div className="state-card compact">
+                No submissions yet for this challenge. Submit your code to see it here.
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 };

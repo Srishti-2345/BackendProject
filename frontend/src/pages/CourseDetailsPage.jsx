@@ -39,11 +39,15 @@ const CourseDetailsPage = () => {
       const checkout = await api.post("/enrollments/checkout", {
         courseId: course._id,
       });
-      await api.post("/enrollments/confirm", {
+      const confirm = await api.post("/enrollments/confirm", {
         courseId: course._id,
         orderId: checkout.data.order._id,
       });
-      setMessage("Enrollment successful. Visit your dashboard to continue learning.");
+      setMessage("Enrollment successful. Opening your course...");
+      const enrollmentId = confirm.data.enrollment?._id;
+      if (enrollmentId) {
+        navigate(`/learn/${enrollmentId}`);
+      }
     } catch (error) {
       setMessage(error.response?.data?.message || "Enrollment failed");
     }

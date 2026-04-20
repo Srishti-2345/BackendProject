@@ -108,6 +108,28 @@ export const getMyEnrollments = async (req, res, next) => {
   }
 };
 
+export const getEnrollmentCourse = async (req, res, next) => {
+  try {
+    const enrollment = await Enrollment.findOne({
+      _id: req.params.enrollmentId,
+      student: req.user._id,
+    }).populate({
+      path: "course",
+      populate: { path: "instructor", select: "name bio avatarUrl" },
+    });
+
+    if (!enrollment) {
+      const error = new Error("Enrollment not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    res.json({ success: true, enrollment });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const markLessonComplete = async (req, res, next) => {
   try {
     const { enrollmentId } = req.params;

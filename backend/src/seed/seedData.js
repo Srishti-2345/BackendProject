@@ -96,15 +96,52 @@ const runSeed = async () => {
       {
         title: "Getting Started",
         lessons: [
-          { title: "Course Introduction", duration: "08:30", isPreview: true },
-          { title: "Setting Up the Development Environment", duration: "14:00" },
+          {
+            title: "Course Introduction",
+            duration: "08:30",
+            contentType: "video",
+            videoUrl: "https://www.youtube.com/watch?v=Ke90Tje7VS0",
+            resources: ["https://react.dev/learn"],
+            isPreview: true,
+          },
+          {
+            title: "Setting Up the Development Environment",
+            duration: "14:00",
+            contentType: "article",
+            articleBody:
+              "# Setup your MERN workspace\n\nYou are going to run two apps:\n- `backend` (Express + MongoDB)\n- `frontend` (React + Vite)\n\n## Checklist\n- Node.js 18+\n- MongoDB running (local or Atlas)\n- A code editor\n\n## Steps\n1. Create a folder for your project\n2. Initialize `backend` and `frontend`\n3. Add environment variables\n4. Start the API and the client\n\n## Sanity check\nWhen everything works:\n- API health endpoint returns JSON\n- Frontend loads and can login\n",
+            articleUrl: "https://nodejs.org/en/download",
+            resources: ["https://nodejs.org/en/download", "https://www.mongodb.com/try/download/community"],
+          },
         ],
       },
       {
         title: "Backend Foundations",
         lessons: [
-          { title: "Express Project Setup", duration: "12:15" },
-          { title: "MongoDB Models and Relationships", duration: "18:40" },
+          {
+            title: "Express Project Setup",
+            duration: "12:15",
+            contentType: "video",
+            videoUrl: "https://www.youtube.com/watch?v=Oe421EPjeBE",
+            resources: ["https://expressjs.com/"],
+          },
+          {
+            title: "MongoDB Models and Relationships",
+            duration: "18:40",
+            contentType: "article",
+            articleBody:
+              "# Modeling your learning platform\n\nA clean data model keeps your product fast and maintainable.\n\n## Core entities\n- Users\n- Topics\n- Courses\n- Enrollments\n- XP events\n\n## Practical tips\n- Prefer references for relationships and populate only where needed\n- Add indexes for unique constraints and common lookups\n- Keep write paths simple (award XP via an event ledger)\n\n## Next\nTry adding one more field to a lesson:\n- `resources` for links and PDFs\n",
+            articleUrl: "https://mongoosejs.com/docs/models.html",
+            resources: ["https://mongoosejs.com/docs/models.html", "https://mongoosejs.com/docs/populate.html"],
+          },
+          {
+            title: "Build Your First API Route",
+            duration: "11:10",
+            contentType: "article",
+            articleBody:
+              "# Your first API route\n\nYou will build a minimal route and validate it end to end.\n\n## Goal\n- Add a route: `GET /api/health`\n- Return `{ success: true }`\n\n## Why it matters\nThis confirms your server, middleware, and JSON responses are correct before you add auth.\n\n## Next\nAdd a `POST /api/auth/register` endpoint and test it from the frontend.\n",
+            resources: ["https://expressjs.com/en/guide/routing.html"],
+          },
         ],
       },
     ],

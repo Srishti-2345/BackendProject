@@ -115,6 +115,11 @@ const DashboardPage = () => {
               <h3>{enrollment.course?.title}</h3>
               <p>Instructor: {enrollment.course?.instructor?.name}</p>
               <p>Progress: {enrollment.completionPercentage}%</p>
+              <div className="button-row">
+                <Link className="primary-button" to={`/learn/${enrollment._id}`}>
+                  Open Course
+                </Link>
+              </div>
               <ul className="progress-list">
                 {enrollment.progress.map((item) => (
                   <li key={item.lessonTitle}>

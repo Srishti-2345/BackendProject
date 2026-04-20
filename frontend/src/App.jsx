@@ -10,6 +10,7 @@ import CoursesPage from "./pages/CoursesPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import HomePage from "./pages/HomePage.jsx";
 import InstructorDashboardPage from "./pages/InstructorDashboardPage.jsx";
+import LearningPage from "./pages/LearningPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import TopicDetailsPage from "./pages/TopicDetailsPage.jsx";
@@ -33,6 +34,14 @@ const App = () => (
           element={
             <ProtectedRoute allowedRoles={["student", "instructor"]}>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/learn/:enrollmentId"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <LearningPage />
             </ProtectedRoute>
           }
         />
