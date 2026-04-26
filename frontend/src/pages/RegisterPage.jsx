@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext.jsx";
 
+const REVIEWER_EMAIL_DOMAIN = "chitkara.edu.in";
+
 const RegisterPage = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
@@ -68,6 +70,11 @@ const RegisterPage = () => {
             <option value="instructor">Instructor</option>
             <option value="reviewer">Reviewer</option>
           </select>
+          {formData.role === "reviewer" ? (
+            <div className="state-card compact">
+              Reviewer accounts must use an @{REVIEWER_EMAIL_DOMAIN} email address.
+            </div>
+          ) : null}
           {error ? <div className="error-note">{error}</div> : null}
           <button className="primary-button full-width" type="submit">
             Create Account
