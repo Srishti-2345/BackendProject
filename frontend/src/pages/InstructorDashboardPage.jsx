@@ -94,6 +94,8 @@ const InstructorDashboardPage = () => {
   const [readiness, setReadiness] = useState([]);
   const [topics, setTopics] = useState([]);
   const [message, setMessage] = useState("");
+  const [openLearnMessage, setOpenLearnMessage] = useState(null);
+  const [openLearnSubmitting, setOpenLearnSubmitting] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState("");
   const [editingBlogId, setEditingBlogId] = useState("");
   const [editingChallengeId, setEditingChallengeId] = useState("");
@@ -334,9 +336,18 @@ const InstructorDashboardPage = () => {
 
     try {
       if (!resumeFile) {
-        setMessage("Please upload a PDF resume before submitting.");
+        setOpenLearnMessage({
+          tone: "error-note",
+          text: "Please upload a PDF resume before submitting.",
+        });
         return;
       }
+
+      setOpenLearnSubmitting(true);
+      setOpenLearnMessage({
+        tone: "state-card compact",
+        text: "Processing your PDF resume and matching it to topics with OpenAI. This can take a few seconds.",
+      });
 
       const formData = new FormData();
       formData.append("fullName", openLearnForm.fullName);
@@ -349,13 +360,24 @@ const InstructorDashboardPage = () => {
       formData.append("experienceSummary", openLearnForm.experienceSummary);
       formData.append("resume", resumeFile);
 
-      await api.post("/creator/openlearn/applications", formData);
+      const { data } = await api.post("/creator/openlearn/applications", formData);
 
-      setMessage("OpenLearn contributor application reviewed successfully.");
+      const approvedTopics = data.contributorAccess?.approvedTopics || [];
+      setOpenLearnMessage({
+        tone: "success-note",
+        text: approvedTopics.length
+          ? `Resume review completed. Unlocked topics: ${approvedTopics.join(", ")}.`
+          : data.application?.analysisSummary || "Resume review completed.",
+      });
       setResumeFile(null);
       await loadInstructorData();
     } catch (error) {
-      setMessage(error.response?.data?.message || "Could not submit OpenLearn application");
+      setOpenLearnMessage({
+        tone: "error-note",
+        text: error.response?.data?.message || "Could not submit OpenLearn application",
+      });
+    } finally {
+      setOpenLearnSubmitting(false);
     }
   };
 
@@ -613,10 +635,14 @@ const InstructorDashboardPage = () => {
               <p>Upload a PDF resume once and get topic suggestions from your profile.</p>
             </div>
             <form className="panel creator-form-panel" onSubmit={handleOpenLearnSubmit}>
+              {openLearnMessage ? (
+                <div className={openLearnMessage.tone}>{openLearnMessage.text}</div>
+              ) : null}
               <div className="creator-form-grid">
                 <input
                   placeholder="Full name"
                   value={openLearnForm.fullName}
+                  disabled={openLearnSubmitting}
                   onChange={(event) =>
                     setOpenLearnForm({ ...openLearnForm, fullName: event.target.value })
                   }
@@ -624,6 +650,7 @@ const InstructorDashboardPage = () => {
                 <input
                   placeholder="Phone"
                   value={openLearnForm.phone}
+                  disabled={openLearnSubmitting}
                   onChange={(event) =>
                     setOpenLearnForm({ ...openLearnForm, phone: event.target.value })
                   }
@@ -631,6 +658,7 @@ const InstructorDashboardPage = () => {
                 <input
                   placeholder="Current role"
                   value={openLearnForm.currentRole}
+                  disabled={openLearnSubmitting}
                   onChange={(event) =>
                     setOpenLearnForm({ ...openLearnForm, currentRole: event.target.value })
                   }
@@ -639,6 +667,7 @@ const InstructorDashboardPage = () => {
                   type="number"
                   placeholder="Years of experience"
                   value={openLearnForm.yearsOfExperience}
+                  disabled={openLearnSubmitting}
                   onChange={(event) =>
                     setOpenLearnForm({ ...openLearnForm, yearsOfExperience: event.target.value })
                   }
@@ -646,6 +675,7 @@ const InstructorDashboardPage = () => {
                 <input
                   placeholder="LinkedIn URL"
                   value={openLearnForm.linkedinUrl}
+                  disabled={openLearnSubmitting}
                   onChange={(event) =>
                     setOpenLearnForm({ ...openLearnForm, linkedinUrl: event.target.value })
                   }
@@ -653,6 +683,7 @@ const InstructorDashboardPage = () => {
                 <input
                   placeholder="Portfolio URL"
                   value={openLearnForm.portfolioUrl}
+                  disabled={openLearnSubmitting}
                   onChange={(event) =>
                     setOpenLearnForm({ ...openLearnForm, portfolioUrl: event.target.value })
                   }
@@ -661,6 +692,7 @@ const InstructorDashboardPage = () => {
               <input
                 placeholder="Education"
                 value={openLearnForm.education}
+                disabled={openLearnSubmitting}
                 onChange={(event) =>
                   setOpenLearnForm({ ...openLearnForm, education: event.target.value })
                 }
@@ -669,6 +701,7 @@ const InstructorDashboardPage = () => {
                 rows="4"
                 placeholder="Brief summary of your experience"
                 value={openLearnForm.experienceSummary}
+                disabled={openLearnSubmitting}
                 onChange={(event) =>
                   setOpenLearnForm({ ...openLearnForm, experienceSummary: event.target.value })
                 }
@@ -678,12 +711,23 @@ const InstructorDashboardPage = () => {
                 <input
                   type="file"
                   accept="application/pdf,.pdf"
+                  disabled={openLearnSubmitting}
                   onChange={(event) => setResumeFile(event.target.files?.[0] || null)}
                 />
-                <small>{resumeFile ? resumeFile.name : "PDF only, up to 5 MB."}</small>
+                <small>
+                  {openLearnSubmitting
+                    ? "Analyzing your PDF and unlocking topics..."
+                    : resumeFile
+                      ? resumeFile.name
+                      : "PDF only, up to 5 MB."}
+                </small>
               </label>
-              <button className="primary-button creator-submit" type="submit">
-                Analyze Resume and Apply
+              <button
+                className="primary-button creator-submit"
+                type="submit"
+                disabled={openLearnSubmitting}
+              >
+                {openLearnSubmitting ? "Analyzing Resume..." : "Analyze Resume and Apply"}
               </button>
             </form>
           </section>

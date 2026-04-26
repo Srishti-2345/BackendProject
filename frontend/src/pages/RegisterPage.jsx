@@ -24,7 +24,17 @@ const RegisterPage = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (
+      formData.role === "reviewer" &&
+      !formData.email.toLowerCase().endsWith(`@${REVIEWER_EMAIL_DOMAIN}`)
+    ) {
+      setError(`Reviewer accounts must use an @${REVIEWER_EMAIL_DOMAIN} email address.`);
+      return;
+    }
+
     try {
+      setError("");
       const user = await register(formData);
       navigate(destinationByRole[user.role] || "/dashboard");
     } catch (submitError) {
