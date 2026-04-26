@@ -37,6 +37,7 @@ const initialChallengeForm = {
   publicTestCases: '[\n  {\n    "input": [],\n    "expectedOutput": "",\n    "explanation": ""\n  }\n]',
   hiddenTestCases: "[]",
   editorial: "",
+  status: "draft",
 };
 
 const initialOpenLearnForm = {
@@ -57,6 +58,24 @@ const sourceLabelMap = {
   manual_review: "Manual approval",
 };
 
+const reviewStatusOptions = [
+  { value: "draft", label: "Save as draft" },
+  { value: "pending_review", label: "Submit for review" },
+];
+
+const statusLabelMap = {
+  draft: "Draft",
+  pending_review: "Pending review",
+  needs_changes: "Needs changes",
+  published: "Published",
+  rejected: "Rejected",
+};
+
+const toLineBreakText = (items = []) => items.join("\n");
+const toCommaText = (items = []) => items.join(", ");
+const toJsonText = (value) => JSON.stringify(value || [], null, 2);
+const getReviewNotes = (item) => item.reviewNotes || item.feedback || "";
+
 const InstructorDashboardPage = () => {
   const { user } = useAuth();
   const [courseForm, setCourseForm] = useState(initialCourseForm);
@@ -69,11 +88,15 @@ const InstructorDashboardPage = () => {
   const [resumeFile, setResumeFile] = useState(null);
   const [courses, setCourses] = useState([]);
   const [blogs, setBlogs] = useState([]);
+  const [challenges, setChallenges] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [creatorDashboard, setCreatorDashboard] = useState(null);
   const [readiness, setReadiness] = useState([]);
   const [topics, setTopics] = useState([]);
   const [message, setMessage] = useState("");
+  const [editingCourseId, setEditingCourseId] = useState("");
+  const [editingBlogId, setEditingBlogId] = useState("");
+  const [editingChallengeId, setEditingChallengeId] = useState("");
 
   const applyTopicDefaults = (topicSlug, formSetter, currentForm, availableTopics = topics) => {
     const topic = availableTopics.find((item) => item.slug === topicSlug);
@@ -84,6 +107,21 @@ const InstructorDashboardPage = () => {
     });
   };
 
+  const resetCourseEditor = () => {
+    setCourseForm(initialCourseForm);
+    setEditingCourseId("");
+  };
+
+  const resetBlogEditor = () => {
+    setBlogForm(initialBlogForm);
+    setEditingBlogId("");
+  };
+
+  const resetChallengeEditor = () => {
+    setChallengeForm(initialChallengeForm);
+    setEditingChallengeId("");
+  };
+
   const loadInstructorData = async () => {
     const [
       coursesResponse,
@@ -92,6 +130,7 @@ const InstructorDashboardPage = () => {
       readinessResponse,
       topicsResponse,
       blogsResponse,
+      challengesResponse,
     ] = await Promise.all([
       api.get("/courses/instructor/me"),
       api.get("/courses/instructor/analytics"),
@@ -99,6 +138,7 @@ const InstructorDashboardPage = () => {
       api.get("/creator/readiness"),
       api.get("/topics"),
       api.get("/blogs/me"),
+      api.get("/challenges/me"),
     ]);
 
     setCourses(coursesResponse.data.courses);
@@ -107,6 +147,7 @@ const InstructorDashboardPage = () => {
     setReadiness(readinessResponse.data.readiness);
     setTopics(topicsResponse.data.topics);
     setBlogs(blogsResponse.data.blogs);
+    setChallenges(challengesResponse.data.challenges);
   };
 
   useEffect(() => {
@@ -174,7 +215,7 @@ const InstructorDashboardPage = () => {
     event.preventDefault();
 
     try {
-      await api.post("/courses", {
+      const payload = {
         ...courseForm,
         price: Number(courseForm.price),
         learningOutcomes: courseForm.learningOutcomes
@@ -197,13 +238,24 @@ const InstructorDashboardPage = () => {
             ],
           },
         ],
-      });
+      };
 
-      setMessage("Course created successfully.");
-      setCourseForm(initialCourseForm);
+      if (editingCourseId) {
+        await api.put(`/courses/${editingCourseId}`, payload);
+        setMessage("Course updated successfully.");
+      } else {
+        await api.post("/courses", payload);
+        setMessage(
+          payload.status === "pending_review"
+            ? "Course submitted for review."
+            : "Course draft created successfully."
+        );
+      }
+
+      resetCourseEditor();
       await loadInstructorData();
     } catch (error) {
-      setMessage(error.response?.data?.message || "Could not create course");
+      setMessage(error.response?.data?.message || "Could not save course");
     }
   };
 
@@ -211,12 +263,22 @@ const InstructorDashboardPage = () => {
     event.preventDefault();
 
     try {
-      await api.post("/blogs", blogForm);
-      setMessage("Blog draft submitted.");
-      setBlogForm(initialBlogForm);
+      if (editingBlogId) {
+        await api.put(`/blogs/${editingBlogId}`, blogForm);
+        setMessage("Blog updated successfully.");
+      } else {
+        await api.post("/blogs", blogForm);
+        setMessage(
+          blogForm.status === "pending_review"
+            ? "Blog submitted for review."
+            : "Blog draft saved."
+        );
+      }
+
+      resetBlogEditor();
       await loadInstructorData();
     } catch (error) {
-      setMessage(error.response?.data?.message || "Could not create blog draft");
+      setMessage(error.response?.data?.message || "Could not save blog draft");
     }
   };
 
@@ -224,7 +286,7 @@ const InstructorDashboardPage = () => {
     event.preventDefault();
 
     try {
-      await api.post("/challenges", {
+      const payload = {
         title: challengeForm.title,
         topicSlug: challengeForm.topicSlug,
         difficulty: challengeForm.difficulty,
@@ -245,13 +307,25 @@ const InstructorDashboardPage = () => {
         publicTestCases: JSON.parse(challengeForm.publicTestCases),
         hiddenTestCases: JSON.parse(challengeForm.hiddenTestCases),
         editorial: challengeForm.editorial,
-      });
+        status: challengeForm.status,
+      };
 
-      setMessage("Challenge created successfully.");
-      setChallengeForm(initialChallengeForm);
+      if (editingChallengeId) {
+        await api.put(`/challenges/${editingChallengeId}`, payload);
+        setMessage("Challenge updated successfully.");
+      } else {
+        await api.post("/challenges", payload);
+        setMessage(
+          payload.status === "pending_review"
+            ? "Challenge submitted for review."
+            : "Challenge draft saved."
+        );
+      }
+
+      resetChallengeEditor();
       await loadInstructorData();
     } catch (error) {
-      setMessage(error.response?.data?.message || "Could not create challenge");
+      setMessage(error.response?.data?.message || "Could not save challenge");
     }
   };
 
@@ -299,6 +373,59 @@ const InstructorDashboardPage = () => {
     }
   };
 
+  const startCourseEdit = (course) => {
+    setEditingCourseId(course._id);
+    setCourseForm({
+      title: course.title || "",
+      subtitle: course.subtitle || "",
+      description: course.description || "",
+      category: course.category || "Web Development",
+      topicSlug: course.topicSlug || accessibleTopics[0]?.slug || "react",
+      level: course.level || "beginner",
+      thumbnailUrl: course.thumbnailUrl || "",
+      price: course.price || 0,
+      learningOutcomes: toLineBreakText(course.learningOutcomes),
+      requirements: toLineBreakText(course.requirements),
+      status:
+        course.status === "published" || course.status === "rejected"
+          ? "draft"
+          : course.status || "draft",
+    });
+  };
+
+  const startBlogEdit = (blog) => {
+    setEditingBlogId(blog._id);
+    setBlogForm({
+      title: blog.title || "",
+      excerpt: blog.excerpt || "",
+      content: blog.content || "",
+      topicSlug: blog.topicSlug || accessibleTopics[0]?.slug || "react",
+      status:
+        blog.status === "published" || blog.status === "rejected" ? "draft" : blog.status || "draft",
+    });
+  };
+
+  const startChallengeEdit = (challenge) => {
+    setEditingChallengeId(challenge._id);
+    setChallengeForm({
+      title: challenge.title || "",
+      topicSlug: challenge.topicSlug || accessibleTopics[0]?.slug || "react",
+      difficulty: challenge.difficulty || "easy",
+      prompt: challenge.prompt || "",
+      constraints: toLineBreakText(challenge.constraints),
+      examples: toLineBreakText(challenge.examples),
+      tags: toCommaText(challenge.tags),
+      starterCode: challenge.starterCode || initialChallengeForm.starterCode,
+      publicTestCases: toJsonText(challenge.publicTestCases),
+      hiddenTestCases: toJsonText(challenge.hiddenTestCases),
+      editorial: challenge.editorial || "",
+      status:
+        challenge.status === "published" || challenge.status === "rejected"
+          ? "draft"
+          : challenge.status || "draft",
+    });
+  };
+
   return (
     <section className="section-stack creator-shell">
       <div className="section-header">
@@ -313,8 +440,8 @@ const InstructorDashboardPage = () => {
           <span className="eyebrow">Structured overview</span>
           <h3>Everything important in one place</h3>
           <p>
-            Track contribution access, unlock topics, and create courses, challenges, and blog
-            drafts from a cleaner workflow.
+            Track contribution access, submit content for approval, and respond to reviewer
+            feedback from a single workflow.
           </p>
         </div>
         {analytics && creatorDashboard ? (
@@ -443,7 +570,7 @@ const InstructorDashboardPage = () => {
                   <div className="list-item">
                     <div>
                       <strong>Under review</strong>
-                      <p>Awaiting moderator decision</p>
+                      <p>Awaiting reviewer decision</p>
                     </div>
                     <span>{creatorDashboard.contentPipeline.underReview}</span>
                   </div>
@@ -460,6 +587,13 @@ const InstructorDashboardPage = () => {
                       <p>Live content in the community</p>
                     </div>
                     <span>{creatorDashboard.contentPipeline.published}</span>
+                  </div>
+                  <div className="list-item">
+                    <div>
+                      <strong>Rejected</strong>
+                      <p>Stopped before publication</p>
+                    </div>
+                    <span>{creatorDashboard.contentPipeline.rejected}</span>
                   </div>
                 </>
               ) : (
@@ -560,17 +694,22 @@ const InstructorDashboardPage = () => {
                 <div className="creator-section-head">
                   <div>
                     <span className="eyebrow">Create</span>
-                    <h3>Publish new learning content</h3>
+                    <h3>Build content and send it to review</h3>
                   </div>
-                  <p>Use the content tools below once you have access in the relevant topic.</p>
+                  <p>Creators now publish through reviewer approval, not directly to learners.</p>
                 </div>
                 <div className="creator-forms-grid">
                   <form className="panel creator-form-panel" onSubmit={handleCourseSubmit}>
                     <div className="creator-panel-head">
                       <div>
-                        <h3>Create a course</h3>
+                        <h3>{editingCourseId ? "Edit course" : "Create a course"}</h3>
                         <p>Build a structured learning path for a topic you can contribute to.</p>
                       </div>
+                      {editingCourseId ? (
+                        <button className="ghost-button" type="button" onClick={resetCourseEditor}>
+                          New course
+                        </button>
+                      ) : null}
                     </div>
                     <input
                       placeholder="Course title"
@@ -659,8 +798,11 @@ const InstructorDashboardPage = () => {
                           setCourseForm({ ...courseForm, status: event.target.value })
                         }
                       >
-                        <option value="draft">Draft</option>
-                        <option value="published">Published</option>
+                        {reviewStatusOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <textarea
@@ -680,16 +822,25 @@ const InstructorDashboardPage = () => {
                       }
                     />
                     <button className="primary-button creator-submit" type="submit">
-                      Save Course
+                      {editingCourseId ? "Update course" : "Save course"}
                     </button>
                   </form>
 
                   <form className="panel creator-form-panel" onSubmit={handleChallengeSubmit}>
                     <div className="creator-panel-head">
                       <div>
-                        <h3>Create a challenge</h3>
+                        <h3>{editingChallengeId ? "Edit challenge" : "Create a challenge"}</h3>
                         <p>Upload a coding task with test cases and starter code.</p>
                       </div>
+                      {editingChallengeId ? (
+                        <button
+                          className="ghost-button"
+                          type="button"
+                          onClick={resetChallengeEditor}
+                        >
+                          New challenge
+                        </button>
+                      ) : null}
                     </div>
                     <input
                       placeholder="Challenge title"
@@ -785,8 +936,20 @@ const InstructorDashboardPage = () => {
                         setChallengeForm({ ...challengeForm, editorial: event.target.value })
                       }
                     />
+                    <select
+                      value={challengeForm.status}
+                      onChange={(event) =>
+                        setChallengeForm({ ...challengeForm, status: event.target.value })
+                      }
+                    >
+                      {reviewStatusOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
                     <button className="primary-button creator-submit" type="submit">
-                      Publish Challenge
+                      {editingChallengeId ? "Update challenge" : "Save challenge"}
                     </button>
                   </form>
                 </div>
@@ -798,15 +961,20 @@ const InstructorDashboardPage = () => {
                     <span className="eyebrow">Write</span>
                     <h3>Blog drafts and content library</h3>
                   </div>
-                  <p>Draft blogs and review everything you have already created.</p>
+                  <p>Draft blogs, submit them to review, and respond to reviewer guidance.</p>
                 </div>
                 <div className="creator-forms-grid">
                   <form className="panel creator-form-panel" onSubmit={handleBlogSubmit}>
                     <div className="creator-panel-head">
                       <div>
-                        <h3>Create a blog draft</h3>
+                        <h3>{editingBlogId ? "Edit blog" : "Create a blog draft"}</h3>
                         <p>Share topic knowledge in article form and submit when ready.</p>
                       </div>
+                      {editingBlogId ? (
+                        <button className="ghost-button" type="button" onClick={resetBlogEditor}>
+                          New blog
+                        </button>
+                      ) : null}
                     </div>
                     <input
                       placeholder="Blog title"
@@ -846,11 +1014,14 @@ const InstructorDashboardPage = () => {
                       value={blogForm.status}
                       onChange={(event) => setBlogForm({ ...blogForm, status: event.target.value })}
                     >
-                      <option value="draft">Draft</option>
-                      <option value="pending_review">Submit for review</option>
+                      {reviewStatusOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
                     </select>
                     <button className="primary-button creator-submit" type="submit">
-                      Save Blog Draft
+                      {editingBlogId ? "Update blog" : "Save blog"}
                     </button>
                   </form>
 
@@ -859,20 +1030,32 @@ const InstructorDashboardPage = () => {
                       <div className="creator-panel-head">
                         <div>
                           <h3>Your courses</h3>
-                          <p>Recently created learning paths.</p>
+                          <p>Publish through the reviewer queue.</p>
                         </div>
                       </div>
                       <div className="list-stack">
                         {courses.length ? (
                           courses.map((course) => (
-                            <div key={course._id} className="list-item">
-                              <div>
-                                <strong>{course.title}</strong>
-                                <p>
-                                  {course.topicSlug} - {course.category}
-                                </p>
+                            <div key={course._id} className="reviewable-list-card">
+                              <div className="reviewable-list-head">
+                                <div>
+                                  <strong>{course.title}</strong>
+                                  <p>
+                                    {course.topicSlug} - {course.category}
+                                  </p>
+                                </div>
+                                <span className="badge">{statusLabelMap[course.status] || course.status}</span>
                               </div>
-                              <span className="badge">{course.status}</span>
+                              {getReviewNotes(course) ? (
+                                <p className="review-note-inline">{getReviewNotes(course)}</p>
+                              ) : null}
+                              <button
+                                className="ghost-button"
+                                type="button"
+                                onClick={() => startCourseEdit(course)}
+                              >
+                                Edit
+                              </button>
                             </div>
                           ))
                         ) : (
@@ -885,20 +1068,35 @@ const InstructorDashboardPage = () => {
                       <div className="creator-panel-head">
                         <div>
                           <h3>Your challenges</h3>
-                          <p>Challenge uploads and solve activity.</p>
+                          <p>Upload, review, revise, and resubmit from here.</p>
                         </div>
                       </div>
                       <div className="list-stack">
-                        {creatorDashboard?.challenges?.length ? (
-                          creatorDashboard.challenges.map((challenge) => (
-                            <div key={challenge._id} className="list-item">
-                              <div>
-                                <strong>{challenge.title}</strong>
-                                <p>
-                                  {challenge.topicSlug} - {challenge.difficulty}
-                                </p>
+                        {challenges.length ? (
+                          challenges.map((challenge) => (
+                            <div key={challenge._id} className="reviewable-list-card">
+                              <div className="reviewable-list-head">
+                                <div>
+                                  <strong>{challenge.title}</strong>
+                                  <p>
+                                    {challenge.topicSlug} - {challenge.difficulty}
+                                  </p>
+                                </div>
+                                <span className="badge">
+                                  {statusLabelMap[challenge.status] || challenge.status}
+                                </span>
                               </div>
-                              <span className="badge">{challenge.solveCount} solves</span>
+                              <p>{challenge.solveCount} solves</p>
+                              {getReviewNotes(challenge) ? (
+                                <p className="review-note-inline">{getReviewNotes(challenge)}</p>
+                              ) : null}
+                              <button
+                                className="ghost-button"
+                                type="button"
+                                onClick={() => startChallengeEdit(challenge)}
+                              >
+                                Edit
+                              </button>
                             </div>
                           ))
                         ) : (
@@ -917,12 +1115,24 @@ const InstructorDashboardPage = () => {
                       <div className="list-stack">
                         {blogs.length ? (
                           blogs.map((blog) => (
-                            <div key={blog._id} className="list-item">
-                              <div>
-                                <strong>{blog.title}</strong>
-                                <p>{blog.topicSlug}</p>
+                            <div key={blog._id} className="reviewable-list-card">
+                              <div className="reviewable-list-head">
+                                <div>
+                                  <strong>{blog.title}</strong>
+                                  <p>{blog.topicSlug}</p>
+                                </div>
+                                <span className="badge">{statusLabelMap[blog.status] || blog.status}</span>
                               </div>
-                              <span className="badge">{blog.status}</span>
+                              {getReviewNotes(blog) ? (
+                                <p className="review-note-inline">{getReviewNotes(blog)}</p>
+                              ) : null}
+                              <button
+                                className="ghost-button"
+                                type="button"
+                                onClick={() => startBlogEdit(blog)}
+                              >
+                                Edit
+                              </button>
                             </div>
                           ))
                         ) : (

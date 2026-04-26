@@ -14,11 +14,17 @@ const RegisterPage = () => {
   });
   const [error, setError] = useState("");
 
+  const destinationByRole = {
+    reviewer: "/review",
+    instructor: "/create",
+    student: "/dashboard",
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
       const user = await register(formData);
-      navigate(user.role === "instructor" ? "/create" : "/dashboard");
+      navigate(destinationByRole[user.role] || "/dashboard");
     } catch (submitError) {
       setError(submitError.response?.data?.message || "Registration failed");
     }
@@ -60,6 +66,7 @@ const RegisterPage = () => {
           >
             <option value="student">Student</option>
             <option value="instructor">Instructor</option>
+            <option value="reviewer">Reviewer</option>
           </select>
           {error ? <div className="error-note">{error}</div> : null}
           <button className="primary-button full-width" type="submit">

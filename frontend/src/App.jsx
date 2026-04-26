@@ -13,6 +13,7 @@ import InstructorDashboardPage from "./pages/InstructorDashboardPage.jsx";
 import LearningPage from "./pages/LearningPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
+import ReviewDashboardPage from "./pages/ReviewDashboardPage.jsx";
 import TopicDetailsPage from "./pages/TopicDetailsPage.jsx";
 
 const App = () => (
@@ -50,6 +51,14 @@ const App = () => (
           element={
             <ProtectedRoute allowedRoles={["student", "instructor"]}>
               <InstructorDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/review"
+          element={
+            <ProtectedRoute allowedRoles={["reviewer"]}>
+              <ReviewDashboardPage />
             </ProtectedRoute>
           }
         />

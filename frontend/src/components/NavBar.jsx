@@ -17,8 +17,9 @@ const NavBar = () => {
         <NavLink to="/courses">Courses</NavLink>
         <NavLink to="/challenges">Challenges</NavLink>
         <NavLink to="/blogs">Blogs</NavLink>
-        {user && <NavLink to="/dashboard">Dashboard</NavLink>}
-        {user && <NavLink to="/create">Create</NavLink>}
+        {user?.role !== "reviewer" && user && <NavLink to="/dashboard">Dashboard</NavLink>}
+        {user?.role !== "reviewer" && user && <NavLink to="/create">Create</NavLink>}
+        {user?.role === "reviewer" && <NavLink to="/review">Review</NavLink>}
       </nav>
 
       <div className="nav-actions">

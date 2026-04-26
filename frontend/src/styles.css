@@ -967,9 +967,12 @@ p {
 }
 
 .creator-sidebar,
+.reviewer-sidebar,
 .creator-content,
 .creator-section,
-.creator-lists-grid {
+.creator-lists-grid,
+.reviewer-stage,
+.reviewer-shell {
   display: grid;
   gap: 1.25rem;
 }
@@ -977,6 +980,26 @@ p {
 .creator-sidebar {
   position: sticky;
   top: 104px;
+}
+
+.reviewer-grid,
+.reviewer-summary-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.reviewer-grid {
+  grid-template-columns: minmax(320px, 0.8fr) minmax(0, 1.2fr);
+  align-items: start;
+}
+
+.reviewer-sidebar {
+  position: sticky;
+  top: 104px;
+}
+
+.reviewer-summary-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .creator-section-head,
@@ -1051,6 +1074,56 @@ p {
 .creator-locked-panel {
   display: grid;
   gap: 0.75rem;
+}
+
+.reviewable-list-card,
+.review-queue-item,
+.review-content-block,
+.review-decision-panel {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px solid rgba(48, 43, 45, 0.08);
+}
+
+.reviewable-list-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.review-note-inline {
+  color: var(--muted);
+  font-size: 0.94rem;
+}
+
+.review-queue-item {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.review-queue-item:hover,
+.review-queue-item-active {
+  transform: translateY(-1px);
+  border-color: rgba(164, 124, 102, 0.28);
+  background: rgba(218, 184, 157, 0.2);
+}
+
+.reviewer-recent-head {
+  margin-top: 0.5rem;
+}
+
+.review-content-block h4 {
+  margin: 0;
+}
+
+.review-decision-panel {
+  background: rgba(201, 210, 209, 0.16);
 }
 
 .list-item {
@@ -1181,6 +1254,8 @@ p {
   .creator-main-grid,
   .creator-forms-grid,
   .creator-form-grid,
+  .reviewer-grid,
+  .reviewer-summary-grid,
   .auth-layout,
   .challenge-workbench,
   .learning-shell {
@@ -1209,6 +1284,10 @@ p {
   }
 
   .creator-sidebar {
+    position: static;
+  }
+
+  .reviewer-sidebar {
     position: static;
   }
 

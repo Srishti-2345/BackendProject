@@ -9,11 +9,17 @@ const LoginPage = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
 
+  const destinationByRole = {
+    reviewer: "/review",
+    instructor: "/create",
+    student: "/dashboard",
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
       const user = await login(formData);
-      navigate(user.role === "instructor" ? "/create" : "/dashboard");
+      navigate(destinationByRole[user.role] || "/dashboard");
     } catch (submitError) {
       setError(submitError.response?.data?.message || "Login failed");
     }
