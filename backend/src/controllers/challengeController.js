@@ -1,6 +1,7 @@
 import Challenge from "../models/Challenge.js";
 import Submission from "../models/Submission.js";
 import { runChallengeTests } from "../utils/challengeRunner.js";
+import { assertTopicContributorAccess } from "../utils/contributorAccess.js";
 import { awardXp, getTopicStat } from "../utils/progression.js";
 
 const challengeXpByDifficulty = {
@@ -23,6 +24,15 @@ export const getChallenges = async (req, res, next) => {
     }
 
     const challenges = await Challenge.find(query).sort({ createdAt: -1 });
+    res.json({ success: true, challenges });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMyCreatedChallenges = async (req, res, next) => {
+  try {
+    const challenges = await Challenge.find({ createdBy: req.user._id }).sort({ createdAt: -1 });
     res.json({ success: true, challenges });
   } catch (error) {
     next(error);
@@ -89,6 +99,78 @@ export const runChallengeCode = async (req, res, next) => {
       mode: "run",
       execution,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createChallenge = async (req, res, next) => {
+  try {
+    const {
+      title,
+      slug,
+      topicSlug,
+      difficulty = "easy",
+      prompt,
+      constraints = [],
+      examples = [],
+      tags = [],
+      functionName = "solution",
+      starterCode = "function solution() {\n  \n}\n\nmodule.exports = solution;",
+      publicTestCases = [],
+      hiddenTestCases = [],
+      editorial = "",
+      xpReward,
+    } = req.body;
+
+    if (!title || !topicSlug || !prompt) {
+      const error = new Error("Title, topic, and prompt are required");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (!publicTestCases.length) {
+      const error = new Error("At least one public test case is required");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    await assertTopicContributorAccess(req.user, topicSlug);
+
+    const normalizedSlug =
+      slug ||
+      title
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
+    const existingChallenge = await Challenge.findOne({ slug: normalizedSlug });
+    if (existingChallenge) {
+      const error = new Error("A challenge with this slug already exists");
+      error.statusCode = 409;
+      throw error;
+    }
+
+    const challenge = await Challenge.create({
+      title,
+      slug: normalizedSlug,
+      topicSlug,
+      difficulty,
+      prompt,
+      constraints,
+      examples,
+      tags,
+      functionName,
+      starterCode,
+      publicTestCases,
+      hiddenTestCases,
+      editorial,
+      xpReward,
+      createdBy: req.user._id,
+    });
+
+    res.status(201).json({ success: true, challenge });
   } catch (error) {
     next(error);
   }

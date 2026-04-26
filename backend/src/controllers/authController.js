@@ -17,6 +17,7 @@ const sanitizeUser = (user) => ({
   streak: user.streak,
   creatorReputation: user.creatorReputation,
   badges: user.badges,
+  contributorAccess: user.contributorAccess,
   topicStats: user.topicStats,
 });
 

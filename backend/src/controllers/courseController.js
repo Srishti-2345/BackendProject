@@ -1,6 +1,6 @@
 import Course from "../models/Course.js";
-import CreatorApplication from "../models/CreatorApplication.js";
 import Enrollment from "../models/Enrollment.js";
+import { assertTopicContributorAccess } from "../utils/contributorAccess.js";
 
 const buildSlug = (value) =>
   value
@@ -78,17 +78,7 @@ export const createCourse = async (req, res, next) => {
       throw error;
     }
 
-    const approvedApplication = await CreatorApplication.findOne({
-      applicant: req.user._id,
-      topicSlug,
-      status: "approved",
-    });
-
-    if (!approvedApplication) {
-      const error = new Error("You need approved creator access for this topic");
-      error.statusCode = 403;
-      throw error;
-    }
+    await assertTopicContributorAccess(req.user, topicSlug);
 
     const baseSlug = buildSlug(title);
     const similarCount = await Course.countDocuments({

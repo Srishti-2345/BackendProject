@@ -4,6 +4,7 @@ import Course from "../models/Course.js";
 import CreatorApplication from "../models/CreatorApplication.js";
 import Topic from "../models/Topic.js";
 import XPEvent from "../models/XPEvent.js";
+import { getTopicContributionAccess, hasOpenLearnEmail } from "../utils/contributorAccess.js";
 import { getTopicStat, syncUploaderUnlock } from "../utils/progression.js";
 
 export const getTopics = async (_req, res, next) => {
@@ -42,6 +43,8 @@ export const getTopicOverview = async (req, res, next) => {
       });
     }
 
+    const access = req.user ? await getTopicContributionAccess(req.user, topic.slug) : null;
+
     res.json({
       success: true,
       topic,
@@ -50,6 +53,13 @@ export const getTopicOverview = async (req, res, next) => {
       challenges,
       topicProgress,
       application,
+      contributorAccess: access
+        ? {
+            allowed: access.allowed,
+            source: access.source,
+            hasOpenLearnEmail: hasOpenLearnEmail(req.user.email),
+          }
+        : null,
     });
   } catch (error) {
     next(error);
@@ -84,4 +94,3 @@ export const getLearnerDashboard = async (req, res, next) => {
     next(error);
   }
 };
-

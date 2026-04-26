@@ -1,5 +1,5 @@
 import BlogPost from "../models/BlogPost.js";
-import CreatorApplication from "../models/CreatorApplication.js";
+import { assertTopicContributorAccess } from "../utils/contributorAccess.js";
 
 const buildSlug = (value) =>
   value
@@ -39,17 +39,7 @@ export const createBlogDraft = async (req, res, next) => {
       throw error;
     }
 
-    const application = await CreatorApplication.findOne({
-      applicant: req.user._id,
-      topicSlug,
-      status: "approved",
-    });
-
-    if (!application) {
-      const error = new Error("You need an approved creator application for this topic");
-      error.statusCode = 403;
-      throw error;
-    }
+    await assertTopicContributorAccess(req.user, topicSlug);
 
     const baseSlug = buildSlug(title);
     const similarCount = await BlogPost.countDocuments({
@@ -89,4 +79,3 @@ export const getBlogBySlug = async (req, res, next) => {
     next(error);
   }
 };
-

@@ -79,10 +79,16 @@ cd backend
 npm install
 ```
 
-4. Optional: seed demo data
+4. Optional: seed demo data without deleting your existing records
 
 ```bash
 npm run seed
+```
+
+To wipe the demo collections and recreate them from scratch, run:
+
+```bash
+npm run seed:reset
 ```
 
 5. Start the API

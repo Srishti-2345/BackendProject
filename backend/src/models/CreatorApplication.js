@@ -16,6 +16,11 @@ const creatorApplicationSchema = new mongoose.Schema(
       enum: [1, 2, 3],
       default: 1,
     },
+    applicationType: {
+      type: String,
+      enum: ["xp_unlock", "openlearn_resume", "manual_review"],
+      default: "manual_review",
+    },
     statement: {
       type: String,
       required: true,

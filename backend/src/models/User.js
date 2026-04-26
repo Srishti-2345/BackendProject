@@ -45,6 +45,29 @@ const userSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    contributorAccess: {
+      openLearnApplicationStatus: {
+        type: String,
+        enum: ["none", "pending", "approved", "rejected"],
+        default: "none",
+      },
+      approvedTopics: {
+        type: [String],
+        default: [],
+      },
+      analysisSummary: {
+        type: String,
+        default: "",
+      },
+      reviewHighlights: {
+        type: [String],
+        default: [],
+      },
+      reviewedAt: {
+        type: Date,
+        default: null,
+      },
+    },
     topicStats: {
       type: [
         new mongoose.Schema(

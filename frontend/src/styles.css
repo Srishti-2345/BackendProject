@@ -927,6 +927,132 @@ p {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.creator-shell {
+  gap: 1.8rem;
+}
+
+.creator-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.creator-hero-copy {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.creator-hero-copy h3 {
+  font-size: clamp(2rem, 3vw, 2.8rem);
+}
+
+.creator-hero-copy p,
+.creator-section-head p,
+.creator-panel-head p,
+.creator-access-card p,
+.creator-readiness-copy p {
+  color: var(--muted);
+}
+
+.creator-stats {
+  align-self: stretch;
+}
+
+.creator-main-grid {
+  display: grid;
+  grid-template-columns: minmax(290px, 0.75fr) minmax(0, 1.25fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.creator-sidebar,
+.creator-content,
+.creator-section,
+.creator-lists-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.creator-sidebar {
+  position: sticky;
+  top: 104px;
+}
+
+.creator-section-head,
+.creator-panel-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.creator-access-card,
+.creator-readiness-card {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px solid rgba(48, 43, 45, 0.08);
+}
+
+.creator-readiness-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.creator-readiness-copy {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.creator-form-panel {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.creator-form-grid,
+.creator-forms-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.creator-form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.creator-forms-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+.creator-submit {
+  justify-self: start;
+}
+
+.creator-upload-field {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.58);
+  border: 1px dashed rgba(48, 43, 45, 0.18);
+}
+
+.creator-upload-field span {
+  font-weight: 700;
+}
+
+.creator-upload-field small {
+  color: var(--muted);
+}
+
+.creator-locked-panel {
+  display: grid;
+  gap: 0.75rem;
+}
+
 .list-item {
   display: flex;
   align-items: center;
@@ -1051,6 +1177,10 @@ p {
   .hero-grid,
   .details-grid,
   .dashboard-grid,
+  .creator-hero,
+  .creator-main-grid,
+  .creator-forms-grid,
+  .creator-form-grid,
   .auth-layout,
   .challenge-workbench,
   .learning-shell {
@@ -1076,6 +1206,10 @@ p {
 
   .palette-board {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .creator-sidebar {
+    position: static;
   }
 
   .hero-copy h1,
