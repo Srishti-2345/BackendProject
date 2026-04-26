@@ -84,6 +84,14 @@ const runSeed = async () => {
     role: "student",
   });
 
+  const reviewer = await createOrUpdateUser({
+    name: "Demo Reviewer",
+    email: "reviewer@chitkara.edu.in",
+    password: "password123",
+    role: "reviewer",
+    bio: "Reviews community submissions before they reach learners.",
+  });
+
   await upsertDocument(
     Topic,
     { slug: "react" },
@@ -304,6 +312,7 @@ const runSeed = async () => {
   console.log(shouldResetDatabase ? "Seed complete with reset" : "Seed complete without deleting existing data");
   console.log("Instructor:", instructor.email);
   console.log("Student:", student.email);
+  console.log("Reviewer:", reviewer.email);
   process.exit(0);
 };
 

@@ -8,6 +8,7 @@ import {
   getMyChallengeSubmissions,
   runChallengeCode,
   submitChallenge,
+  updateChallenge,
 } from "../controllers/challengeController.js";
 import { authorize, protect } from "../middleware/authMiddleware.js";
 
@@ -23,6 +24,7 @@ router.get(
   getMyChallengeSubmissions
 );
 router.post("/", protect, authorize("student", "instructor"), createChallenge);
+router.put("/:challengeId", protect, authorize("student", "instructor"), updateChallenge);
 router.post("/:challengeId/run", protect, authorize("student", "instructor"), runChallengeCode);
 router.post("/:challengeId/submit", protect, authorize("student", "instructor"), submitChallenge);
 

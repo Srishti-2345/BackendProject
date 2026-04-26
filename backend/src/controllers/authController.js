@@ -2,6 +2,8 @@ import jwt from "jsonwebtoken";
 
 import User from "../models/User.js";
 
+const REVIEWER_EMAIL_DOMAIN = "chitkara.edu.in";
+
 const generateToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: "7d",
@@ -21,12 +23,23 @@ const sanitizeUser = (user) => ({
   topicStats: user.topicStats,
 });
 
+const isReviewerEmail = (email = "") =>
+  email.toLowerCase().endsWith(`@${REVIEWER_EMAIL_DOMAIN}`);
+
 export const registerUser = async (req, res, next) => {
   try {
     const { name, email, password, role } = req.body;
 
     if (!name || !email || !password) {
       const error = new Error("Name, email, and password are required");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (role === "reviewer" && !isReviewerEmail(email)) {
+      const error = new Error(
+        `Reviewer accounts must use an @${REVIEWER_EMAIL_DOMAIN} email address`
+      );
       error.statusCode = 400;
       throw error;
     }
@@ -63,6 +76,14 @@ export const loginUser = async (req, res, next) => {
     if (!user || !(await user.comparePassword(password))) {
       const error = new Error("Invalid email or password");
       error.statusCode = 401;
+      throw error;
+    }
+
+    if (user.role === "reviewer" && !isReviewerEmail(user.email)) {
+      const error = new Error(
+        `Reviewer access is restricted to @${REVIEWER_EMAIL_DOMAIN} email addresses`
+      );
+      error.statusCode = 403;
       throw error;
     }
 

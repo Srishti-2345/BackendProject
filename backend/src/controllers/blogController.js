@@ -64,7 +64,10 @@ export const createBlogDraft = async (req, res, next) => {
 
 export const getBlogBySlug = async (req, res, next) => {
   try {
-    const blog = await BlogPost.findOne({ slug: req.params.slug }).populate("author", "name");
+    const blog = await BlogPost.findOne({ slug: req.params.slug, status: "published" }).populate(
+      "author",
+      "name"
+    );
     if (!blog) {
       const error = new Error("Blog not found");
       error.statusCode = 404;
@@ -72,6 +75,31 @@ export const getBlogBySlug = async (req, res, next) => {
     }
 
     blog.engagement.views += 1;
+    await blog.save();
+
+    res.json({ success: true, blog });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateBlogDraft = async (req, res, next) => {
+  try {
+    const blog = await BlogPost.findById(req.params.blogId);
+
+    if (!blog) {
+      const error = new Error("Blog not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (String(blog.author) !== String(req.user._id)) {
+      const error = new Error("You can only edit your own blog");
+      error.statusCode = 403;
+      throw error;
+    }
+
+    Object.assign(blog, req.body);
     await blog.save();
 
     res.json({ success: true, blog });

@@ -10,6 +10,94 @@ import { getTopicContributionAccess, hasOpenLearnEmail } from "../utils/contribu
 import { reviewOpenLearnApplication } from "../utils/openLearnReview.js";
 import { awardXp, getTopicStat, syncUploaderUnlock } from "../utils/progression.js";
 
+const reviewableConfigs = {
+  course: {
+    Model: Course,
+    ownerField: "instructor",
+    ownerLabel: "instructor",
+    pendingStatuses: ["pending_review"],
+    recentStatuses: ["published", "needs_changes", "rejected"],
+    populate: "instructor",
+    toDetails: (item) => ({
+      category: item.category,
+      level: item.level,
+      subtitle: item.subtitle || "",
+      description: item.description || "",
+      sections: item.sections || [],
+      constraints: [],
+      examples: [],
+      publicTestCases: [],
+      starterCode: "",
+      content: "",
+      excerpt: "",
+      difficulty: "",
+    }),
+  },
+  challenge: {
+    Model: Challenge,
+    ownerField: "createdBy",
+    ownerLabel: "creator",
+    pendingStatuses: ["pending_review"],
+    recentStatuses: ["published", "needs_changes", "rejected"],
+    populate: "createdBy",
+    toDetails: (item) => ({
+      category: "",
+      level: "",
+      subtitle: "",
+      description: "",
+      sections: [],
+      constraints: item.constraints || [],
+      examples: item.examples || [],
+      publicTestCases: item.publicTestCases || [],
+      starterCode: item.starterCode || "",
+      content: "",
+      excerpt: "",
+      difficulty: item.difficulty || "",
+      prompt: item.prompt || "",
+    }),
+  },
+  blog: {
+    Model: BlogPost,
+    ownerField: "author",
+    ownerLabel: "author",
+    pendingStatuses: ["pending_review"],
+    recentStatuses: ["published", "needs_changes", "rejected"],
+    populate: "author",
+    toDetails: (item) => ({
+      category: "",
+      level: "",
+      subtitle: "",
+      description: "",
+      sections: [],
+      constraints: [],
+      examples: [],
+      publicTestCases: [],
+      starterCode: "",
+      content: item.content || "",
+      excerpt: item.excerpt || "",
+      difficulty: "",
+    }),
+  },
+};
+
+const formatReviewItem = (type, item, config) => ({
+  id: item._id,
+  type,
+  title: item.title,
+  topicSlug: item.topicSlug || "",
+  status: item.status,
+  updatedAt: item.updatedAt,
+  reviewNotes: item.reviewNotes || item.feedback || "",
+  owner: item[config.ownerField]
+    ? {
+        id: item[config.ownerField]._id,
+        name: item[config.ownerField].name,
+        email: item[config.ownerField].email,
+        role: item[config.ownerField].role,
+      }
+    : null,
+});
+
 export const getCreatorReadiness = async (req, res, next) => {
   try {
     const topics = await Topic.find({ isActive: true }).sort({ name: 1 });
@@ -100,6 +188,7 @@ export const getCreatorDashboard = async (req, res, next) => {
       underReview: blogs.filter((item) => item.status === "pending_review").length,
       needsChanges: blogs.filter((item) => item.status === "needs_changes").length,
       published: blogs.filter((item) => item.status === "published").length,
+      rejected: blogs.filter((item) => item.status === "rejected").length,
     };
 
     const creatorPerformance = {
@@ -161,7 +250,7 @@ export const applyForOpenLearnContributor = async (req, res, next) => {
     }
 
     const topics = await Topic.find({ isActive: true }).sort({ name: 1 });
-    const review = reviewOpenLearnApplication({
+    const review = await reviewOpenLearnApplication({
       topics,
       resumeText,
       experienceSummary,
@@ -270,6 +359,132 @@ export const approveCreatorApplication = async (req, res, next) => {
     });
 
     res.json({ success: true, application });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getReviewerQueue = async (_req, res, next) => {
+  try {
+    const entries = await Promise.all(
+      Object.entries(reviewableConfigs).map(async ([type, config]) => {
+        const [pendingItems, recentItems] = await Promise.all([
+          config.Model.find({ status: { $in: config.pendingStatuses } })
+            .sort({ updatedAt: -1 })
+            .populate(config.populate, "name email role"),
+          config.Model.find({ status: { $in: config.recentStatuses } })
+            .sort({ updatedAt: -1 })
+            .limit(5)
+            .populate(config.populate, "name email role"),
+        ]);
+
+        return {
+          type,
+          pendingItems: pendingItems.map((item) => formatReviewItem(type, item, config)),
+          recentItems: recentItems.map((item) => formatReviewItem(type, item, config)),
+        };
+      })
+    );
+
+    const pendingItems = entries.flatMap((entry) => entry.pendingItems).sort((a, b) => {
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+    const recentItems = entries
+      .flatMap((entry) => entry.recentItems)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 8);
+
+    res.json({
+      success: true,
+      pendingItems,
+      recentItems,
+      summary: {
+        pendingCount: pendingItems.length,
+        courseCount: pendingItems.filter((item) => item.type === "course").length,
+        challengeCount: pendingItems.filter((item) => item.type === "challenge").length,
+        blogCount: pendingItems.filter((item) => item.type === "blog").length,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getReviewItem = async (req, res, next) => {
+  try {
+    const config = reviewableConfigs[req.params.contentType];
+
+    if (!config) {
+      const error = new Error("Review content type not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const item = await config.Model.findById(req.params.contentId).populate(
+      config.populate,
+      "name email role"
+    );
+
+    if (!item) {
+      const error = new Error("Review item not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    res.json({
+      success: true,
+      item: {
+        ...formatReviewItem(req.params.contentType, item, config),
+        details: config.toDetails(item),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const submitReviewDecision = async (req, res, next) => {
+  try {
+    const config = reviewableConfigs[req.params.contentType];
+
+    if (!config) {
+      const error = new Error("Review content type not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const { decision, reviewNotes = "" } = req.body;
+    const item = await config.Model.findById(req.params.contentId);
+
+    if (!item) {
+      const error = new Error("Review item not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const decisionMap = {
+      approve: "published",
+      request_changes: "needs_changes",
+      reject: "rejected",
+    };
+
+    if (!decisionMap[decision]) {
+      const error = new Error("Invalid review decision");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    item.status = decisionMap[decision];
+
+    if ("reviewNotes" in item) {
+      item.reviewNotes = reviewNotes;
+    } else if ("feedback" in item) {
+      item.feedback = reviewNotes;
+    }
+
+    await item.save();
+
+    res.json({ success: true, item });
   } catch (error) {
     next(error);
   }

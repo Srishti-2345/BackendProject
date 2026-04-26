@@ -13,7 +13,7 @@ const challengeXpByDifficulty = {
 export const getChallenges = async (req, res, next) => {
   try {
     const { topic = "", difficulty = "" } = req.query;
-    const query = {};
+    const query = { status: "published" };
 
     if (topic) {
       query.topicSlug = topic;
@@ -41,7 +41,7 @@ export const getMyCreatedChallenges = async (req, res, next) => {
 
 export const getChallengeBySlug = async (req, res, next) => {
   try {
-    const challenge = await Challenge.findOne({ slug: req.params.slug });
+    const challenge = await Challenge.findOne({ slug: req.params.slug, status: "published" });
     if (!challenge) {
       const error = new Error("Challenge not found");
       error.statusCode = 404;
@@ -121,6 +121,7 @@ export const createChallenge = async (req, res, next) => {
       hiddenTestCases = [],
       editorial = "",
       xpReward,
+      status = "draft",
     } = req.body;
 
     if (!title || !topicSlug || !prompt) {
@@ -167,6 +168,7 @@ export const createChallenge = async (req, res, next) => {
       hiddenTestCases,
       editorial,
       xpReward,
+      status,
       createdBy: req.user._id,
     });
 
@@ -263,6 +265,31 @@ export const submitChallenge = async (req, res, next) => {
       hiddenSummary,
       hiddenResults: execution.passed ? hiddenResults : [],
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateChallenge = async (req, res, next) => {
+  try {
+    const challenge = await Challenge.findById(req.params.challengeId);
+
+    if (!challenge) {
+      const error = new Error("Challenge not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (String(challenge.createdBy) !== String(req.user._id)) {
+      const error = new Error("You can only edit your own challenge");
+      error.statusCode = 403;
+      throw error;
+    }
+
+    Object.assign(challenge, req.body);
+    await challenge.save();
+
+    res.json({ success: true, challenge });
   } catch (error) {
     next(error);
   }

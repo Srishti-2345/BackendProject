@@ -81,6 +81,15 @@ const challengeSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    status: {
+      type: String,
+      enum: ["draft", "pending_review", "needs_changes", "published", "rejected"],
+      default: "draft",
+    },
+    reviewNotes: {
+      type: String,
+      default: "",
+    },
     solveCount: {
       type: Number,
       default: 0,
