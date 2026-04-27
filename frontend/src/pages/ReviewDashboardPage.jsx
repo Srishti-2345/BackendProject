@@ -81,12 +81,7 @@ const ReviewDashboardPage = () => {
       return [];
     }
 
-    return [
-      activeItem.topicSlug,
-      activeItem.details.category,
-      activeItem.details.level,
-      activeItem.details.difficulty,
-    ].filter(Boolean);
+    return [activeItem.topicSlug, activeItem.details.category, activeItem.details.level].filter(Boolean);
   }, [activeItem]);
 
   const submitReview = async () => {
@@ -121,10 +116,8 @@ const ReviewDashboardPage = () => {
       <div className="section-header">
         <div>
           <span className="eyebrow">Reviewer workspace</span>
-          <h2>Moderate course, challenge, and blog submissions</h2>
-          <p className="section-copy">
-            Review pending content before it reaches learners and keep quality standards tight.
-          </p>
+          <h2>Moderate course and blog submissions</h2>
+          <p className="section-copy">Review pending content before it reaches learners.</p>
         </div>
       </div>
 
@@ -139,10 +132,6 @@ const ReviewDashboardPage = () => {
           <div className="metric-card">
             <strong>{summary.courseCount}</strong>
             <span>Courses</span>
-          </div>
-          <div className="metric-card">
-            <strong>{summary.challengeCount}</strong>
-            <span>Challenges</span>
           </div>
           <div className="metric-card">
             <strong>{summary.blogCount}</strong>
@@ -165,7 +154,6 @@ const ReviewDashboardPage = () => {
             ) : queue.length ? (
               queue.map((item) => {
                 const itemKey = `${item.type}:${item.id}`;
-
                 return (
                   <button
                     key={itemKey}
@@ -188,9 +176,7 @@ const ReviewDashboardPage = () => {
                 );
               })
             ) : (
-              <div className="state-card compact">
-                The moderation queue is clear right now.
-              </div>
+              <div className="state-card compact">The moderation queue is clear right now.</div>
             )}
           </div>
 
@@ -256,59 +242,13 @@ const ReviewDashboardPage = () => {
                   <p>{activeItem.details.description}</p>
                 </div>
               ) : null}
-              {activeItem.details.prompt ? (
-                <div className="review-content-block">
-                  <h4>Challenge prompt</h4>
-                  <p>{activeItem.details.prompt}</p>
-                </div>
-              ) : null}
               {activeItem.details.content ? (
                 <div className="review-content-block">
                   <h4>Blog content</h4>
                   <div className="article-body">{activeItem.details.content}</div>
                 </div>
               ) : null}
-              {activeItem.details.constraints.length ? (
-                <div className="review-content-block">
-                  <h4>Constraints</h4>
-                  <ul className="simple-list">
-                    {activeItem.details.constraints.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {activeItem.details.examples.length ? (
-                <div className="review-content-block">
-                  <h4>Examples</h4>
-                  <ul className="simple-list">
-                    {activeItem.details.examples.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {activeItem.details.publicTestCases.length ? (
-                <div className="review-content-block">
-                  <h4>Visible test cases</h4>
-                  <div className="testcase-stack">
-                    {activeItem.details.publicTestCases.map((testCase, index) => (
-                      <div className="testcase-card" key={`${activeItem.id}-case-${index}`}>
-                        <strong>Case {index + 1}</strong>
-                        <pre>{JSON.stringify(testCase.input, null, 2)}</pre>
-                        <p>Expected: {JSON.stringify(testCase.expectedOutput)}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-              {activeItem.details.starterCode ? (
-                <div className="review-content-block">
-                  <h4>Starter code</h4>
-                  <pre className="article-code">{activeItem.details.starterCode}</pre>
-                </div>
-              ) : null}
-              {activeItem.details.sections.length ? (
+              {activeItem.details.sections?.length ? (
                 <div className="review-content-block">
                   <h4>Course structure</h4>
                   <div className="list-stack">
@@ -336,12 +276,7 @@ const ReviewDashboardPage = () => {
                   value={reviewNotes}
                   onChange={(event) => setReviewNotes(event.target.value)}
                 />
-                <button
-                  className="primary-button"
-                  type="button"
-                  onClick={submitReview}
-                  disabled={submitting}
-                >
+                <button className="primary-button" type="button" onClick={submitReview} disabled={submitting}>
                   {submitting ? "Saving..." : "Submit decision"}
                 </button>
               </div>

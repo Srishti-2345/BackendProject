@@ -27,11 +27,11 @@ const topicSchema = new mongoose.Schema(
         type: Number,
         default: 1500,
       },
-      challengeSolvedThreshold: {
+      quizCompletedThreshold: {
         type: Number,
         default: 20,
       },
-      mediumSolvedThreshold: {
+      masteredQuizThreshold: {
         type: Number,
         default: 5,
       },
@@ -47,4 +47,3 @@ const topicSchema = new mongoose.Schema(
 const Topic = mongoose.model("Topic", topicSchema);
 
 export default Topic;
-

@@ -15,7 +15,7 @@ const NavBar = () => {
       <nav className="nav-links">
         <NavLink to="/">Home</NavLink>
         <NavLink to="/courses">Courses</NavLink>
-        <NavLink to="/challenges">Challenges</NavLink>
+        {user?.role !== "reviewer" && user && <NavLink to="/quiz-studio">Quiz Studio</NavLink>}
         <NavLink to="/blogs">Blogs</NavLink>
         {user?.role !== "reviewer" && user && <NavLink to="/dashboard">Dashboard</NavLink>}
         {user?.role !== "reviewer" && user && <NavLink to="/create">Create</NavLink>}

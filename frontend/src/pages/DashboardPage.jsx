@@ -44,7 +44,7 @@ const DashboardPage = () => {
 
   return (
     <section className="section-stack">
-      <div className="section-header">
+      <div className="section-header section-header-card">
         <div>
           <span className="eyebrow">Student dashboard</span>
           <h2>Your learning progress</h2>
@@ -79,7 +79,7 @@ const DashboardPage = () => {
                     <div>
                       <strong>{item.topicSlug}</strong>
                       <p>
-                        Level {item.level} - {item.challengeSolvedCount} solved
+                        Level {item.level} - {item.quizCompletedCount} quizzes completed
                       </p>
                     </div>
                     <Link to={`/topics/${item.topicSlug}`}>{item.xp} XP</Link>
@@ -111,11 +111,13 @@ const DashboardPage = () => {
       <div className="card-grid">
         {enrollments.length ? (
           enrollments.map((enrollment) => (
-            <article className="panel" key={enrollment._id}>
+            <article className="panel enrollment-card" key={enrollment._id}>
               <h3>{enrollment.course?.title}</h3>
-              <p>Instructor: {enrollment.course?.instructor?.name}</p>
-              <p>Progress: {enrollment.completionPercentage}%</p>
-              <div className="button-row">
+              <div className="enrollment-card-summary">
+                <p>Instructor: {enrollment.course?.instructor?.name}</p>
+                <p>Progress: {enrollment.completionPercentage}%</p>
+              </div>
+              <div className="button-row enrollment-card-actions">
                 <Link className="primary-button" to={`/learn/${enrollment._id}`}>
                   Open Course
                 </Link>

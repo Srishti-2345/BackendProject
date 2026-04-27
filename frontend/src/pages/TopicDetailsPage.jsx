@@ -15,7 +15,7 @@ const TopicDetailsPage = () => {
     return <div className="state-card">Loading topic...</div>;
   }
 
-  const { topic, courses, blogs, challenges, topicProgress, application } = state;
+  const { topic, courses, blogs, topicProgress, application } = state;
 
   return (
     <section className="section-stack">
@@ -30,8 +30,8 @@ const TopicDetailsPage = () => {
               <span>XP</span>
             </div>
             <div className="metric-card">
-              <strong>{topicProgress.challengeSolvedCount}</strong>
-              <span>Challenges solved</span>
+              <strong>{topicProgress.quizCompletedCount}</strong>
+              <span>Quizzes completed</span>
             </div>
             <div className="metric-card">
               <strong>{topicProgress.uploaderUnlocked ? "Unlocked" : "Locked"}</strong>
@@ -39,9 +39,7 @@ const TopicDetailsPage = () => {
             </div>
           </div>
         ) : null}
-        {application ? (
-          <div className="success-note">Creator application status: {application.status}</div>
-        ) : null}
+        {application ? <div className="success-note">Creator application status: {application.status}</div> : null}
       </div>
 
       <div className="dashboard-grid">
@@ -73,21 +71,6 @@ const TopicDetailsPage = () => {
               </div>
             ))}
           </div>
-        </div>
-      </div>
-
-      <div className="panel">
-        <h3>Challenges</h3>
-        <div className="list-stack">
-          {challenges.map((challenge) => (
-            <div className="list-item" key={challenge._id}>
-              <div>
-                <strong>{challenge.title}</strong>
-                <p>{challenge.difficulty}</p>
-              </div>
-              <span>{challenge.xpReward} XP</span>
-            </div>
-          ))}
         </div>
       </div>
     </section>

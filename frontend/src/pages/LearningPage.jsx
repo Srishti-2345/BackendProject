@@ -22,6 +22,9 @@ const flattenLessons = (sections) =>
     }))
   );
 
+const buildLessonKey = ({ sectionTitle = "", lessonTitle = "" }) =>
+  `${String(sectionTitle).trim()}::${String(lessonTitle).trim()}`;
+
 const renderArticle = (raw) => {
   const lines = String(raw || "").split("\n");
   const blocks = [];
@@ -97,9 +100,12 @@ const LearningPage = () => {
   const navigate = useNavigate();
   const { enrollmentId } = useParams();
   const [enrollment, setEnrollment] = useState(null);
+  const [notes, setNotes] = useState({});
+  const [noteDraft, setNoteDraft] = useState("");
   const [activeLessonTitle, setActiveLessonTitle] = useState("");
+  const [activeView, setActiveView] = useState("lesson");
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -107,11 +113,22 @@ const LearningPage = () => {
         setLoading(true);
         const { data } = await api.get(`/enrollments/${enrollmentId}/course`);
         setEnrollment(data.enrollment);
+        setNotes(
+          Object.fromEntries(
+            (data.notes || []).map((item) => [
+              item.lessonKey || buildLessonKey(item),
+              item.content || "",
+            ])
+          )
+        );
         const firstLessonTitle =
           data.enrollment.course.sections?.[0]?.lessons?.[0]?.title || "";
         setActiveLessonTitle((current) => current || firstLessonTitle);
       } catch (error) {
-        setMessage(error.response?.data?.message || "Could not load course access");
+        setMessage({
+          tone: "error-note",
+          text: error.response?.data?.message || "Could not load course access",
+        });
       } finally {
         setLoading(false);
       }
@@ -130,11 +147,43 @@ const LearningPage = () => {
     [lessons, activeLessonTitle]
   );
 
+  const activeLessonKey = useMemo(
+    () =>
+      activeLesson
+        ? buildLessonKey({
+            sectionTitle: activeLesson.sectionTitle,
+            lessonTitle: activeLesson.title,
+          })
+        : "",
+    [activeLesson]
+  );
+
+  useEffect(() => {
+    setNoteDraft((activeLessonKey && notes[activeLessonKey]) || "");
+  }, [activeLessonKey, notes]);
+
   const progressMap = useMemo(() => {
     const map = new Map();
     (enrollment?.progress || []).forEach((item) => map.set(item.lessonTitle, item.completed));
     return map;
   }, [enrollment]);
+
+  const savedNotes = useMemo(
+    () =>
+      Object.entries(notes)
+        .map(([lessonKey, content]) => {
+          const [sectionTitle = "", lessonTitle = ""] = lessonKey.split("::");
+          return {
+            lessonKey,
+            sectionTitle,
+            lessonTitle,
+            content,
+          };
+        })
+        .filter((item) => item.content.trim())
+        .sort((a, b) => a.sectionTitle.localeCompare(b.sectionTitle) || a.lessonTitle.localeCompare(b.lessonTitle)),
+    [notes]
+  );
 
   const toggleLessonComplete = async () => {
     if (!activeLesson) return;
@@ -146,7 +195,57 @@ const LearningPage = () => {
       });
       setEnrollment((current) => ({ ...current, ...data.enrollment }));
     } catch (error) {
-      setMessage(error.response?.data?.message || "Could not update progress");
+      setMessage({
+        tone: "error-note",
+        text: error.response?.data?.message || "Could not update progress",
+      });
+    }
+  };
+
+  const saveNote = async () => {
+    if (!activeLesson) return;
+
+    try {
+      const { data } = await api.put(`/enrollments/${enrollmentId}/notes`, {
+        lessonTitle: activeLesson.title,
+        sectionTitle: activeLesson.sectionTitle,
+        content: noteDraft,
+      });
+      setNotes((current) => ({
+        ...current,
+        [data.note.lessonKey || buildLessonKey(data.note)]: data.note.content || "",
+      }));
+      setMessage({ tone: "success-note", text: "Note saved." });
+    } catch (error) {
+      setMessage({
+        tone: "error-note",
+        text: error.response?.data?.message || "Could not save note",
+      });
+    }
+  };
+
+  const deleteNote = async () => {
+    if (!activeLesson) return;
+
+    try {
+      await api.delete(`/enrollments/${enrollmentId}/notes`, {
+        data: {
+          lessonTitle: activeLesson.title,
+          sectionTitle: activeLesson.sectionTitle,
+        },
+      });
+      setNotes((current) => {
+        const next = { ...current };
+        delete next[activeLessonKey];
+        return next;
+      });
+      setNoteDraft("");
+      setMessage({ tone: "success-note", text: "Note deleted." });
+    } catch (error) {
+      setMessage({
+        tone: "error-note",
+        text: error.response?.data?.message || "Could not delete note",
+      });
     }
   };
 
@@ -155,7 +254,7 @@ const LearningPage = () => {
   }
 
   if (!enrollment) {
-    return <div className="state-card">{message || "Enrollment not found"}</div>;
+    return <div className="state-card">{message?.text || "Enrollment not found"}</div>;
   }
 
   const course = enrollment.course;
@@ -210,88 +309,182 @@ const LearningPage = () => {
             <header className="panel learning-header">
               <div className="meta-row">
                 <span className="eyebrow">{activeLesson.sectionTitle}</span>
-                <button className="primary-button" type="button" onClick={toggleLessonComplete}>
-                  {progressMap.get(activeLesson.title) ? "Mark Incomplete" : "Mark Complete"}
-                </button>
+                <div className="button-row">
+                  <button
+                    className={`ghost-button ${activeView === "lesson" ? "view-toggle-active" : ""}`}
+                    type="button"
+                    onClick={() => setActiveView("lesson")}
+                  >
+                    Lesson
+                  </button>
+                  <button
+                    className={`ghost-button ${activeView === "create-note" ? "view-toggle-active" : ""}`}
+                    type="button"
+                    onClick={() => setActiveView("create-note")}
+                  >
+                    Create Note
+                  </button>
+                  <button
+                    className={`ghost-button ${activeView === "notes" ? "view-toggle-active" : ""}`}
+                    type="button"
+                    onClick={() => setActiveView("notes")}
+                  >
+                    My Notes
+                  </button>
+                  <button className="primary-button" type="button" onClick={toggleLessonComplete}>
+                    {progressMap.get(activeLesson.title) ? "Mark Incomplete" : "Mark Complete"}
+                  </button>
+                </div>
               </div>
               <h1>{activeLesson.title}</h1>
               <p className="section-copy">{activeLesson.duration ? `Duration: ${activeLesson.duration}` : ""}</p>
-              {message ? <div className="error-note">{message}</div> : null}
+              {message ? <div className={message.tone}>{message.text}</div> : null}
             </header>
 
             <section className="panel learning-content">
-              {activeLesson.contentType === "video" && activeLesson.videoUrl ? (
-                isYouTubeUrl(activeLesson.videoUrl) ? (
-                  <div className="video-frame">
-                    <iframe
-                      title={activeLesson.title}
-                      src={toYouTubeEmbed(activeLesson.videoUrl)}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
-                ) : (
-                  <video controls className="native-video" src={activeLesson.videoUrl} />
-                )
-              ) : (
-                <div className="article-render">
-                  {activeLesson.articleUrl ? (
-                    <div className="article-actions">
-                      <a
-                        className="ghost-button"
-                        href={activeLesson.articleUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Read full article
-                      </a>
+              {activeView === "lesson" ? (
+                <>
+                  {activeLesson.contentType === "video" && activeLesson.videoUrl ? (
+                    isYouTubeUrl(activeLesson.videoUrl) ? (
+                      <div className="video-frame">
+                        <iframe
+                          title={activeLesson.title}
+                          src={toYouTubeEmbed(activeLesson.videoUrl)}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </div>
+                    ) : (
+                      <video controls className="native-video" src={activeLesson.videoUrl} />
+                    )
+                  ) : (
+                    <div className="article-render">
+                      {activeLesson.articleUrl ? (
+                        <div className="article-actions">
+                          <a
+                            className="ghost-button"
+                            href={activeLesson.articleUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Read full article
+                          </a>
+                        </div>
+                      ) : null}
+
+                      {renderArticle(activeLesson.articleBody).map((block, index) => {
+                        if (block.type === "h1") return <h2 key={index}>{block.text}</h2>;
+                        if (block.type === "h2") return <h3 key={index}>{block.text}</h3>;
+                        if (block.type === "list")
+                          return (
+                            <ul key={index} className="simple-list">
+                              {block.items.map((item) => (
+                                <li key={item}>{item}</li>
+                              ))}
+                            </ul>
+                          );
+                        if (block.type === "code")
+                          return (
+                            <pre key={index} className="article-code">
+                              <code>{block.text}</code>
+                            </pre>
+                          );
+                        return (
+                          <p key={index} className="article-paragraph">
+                            {block.text}
+                          </p>
+                        );
+                      })}
+
+                      {!activeLesson.articleBody ? (
+                        <div className="state-card compact">No article content yet.</div>
+                      ) : null}
+                    </div>
+                  )}
+
+                  {activeLesson.resources?.length ? (
+                    <div className="learning-resources">
+                      <h3>Resources</h3>
+                      <ul className="simple-list">
+                        {activeLesson.resources.map((link) => (
+                          <li key={link}>
+                            <a href={link} target="_blank" rel="noreferrer">
+                              {link}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   ) : null}
-
-                  {renderArticle(activeLesson.articleBody).map((block, index) => {
-                    if (block.type === "h1") return <h2 key={index}>{block.text}</h2>;
-                    if (block.type === "h2") return <h3 key={index}>{block.text}</h3>;
-                    if (block.type === "list")
-                      return (
-                        <ul key={index} className="simple-list">
-                          {block.items.map((item) => (
-                            <li key={item}>{item}</li>
-                          ))}
-                        </ul>
-                      );
-                    if (block.type === "code")
-                      return (
-                        <pre key={index} className="article-code">
-                          <code>{block.text}</code>
-                        </pre>
-                      );
-                    return (
-                      <p key={index} className="article-paragraph">
-                        {block.text}
+                </>
+              ) : activeView === "create-note" ? (
+                <section className="learning-notes panel">
+                  <div className="creator-panel-head">
+                    <div>
+                      <span className="eyebrow">Create Note</span>
+                      <h3>Write a note for {activeLesson.title}</h3>
+                      <p className="section-copy">
+                        Save notes for the current lesson and they will appear in My Notes.
                       </p>
-                    );
-                  })}
-
-                  {!activeLesson.articleBody ? (
-                    <div className="state-card compact">No article content yet.</div>
-                  ) : null}
-                </div>
+                    </div>
+                    <div className="button-row">
+                      <button className="ghost-button" type="button" onClick={deleteNote}>
+                        Delete note
+                      </button>
+                      <button className="primary-button" type="button" onClick={saveNote}>
+                        Save note
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    rows="12"
+                    placeholder="Write notes for this lesson. They will appear in My Notes after you save."
+                    value={noteDraft}
+                    onChange={(event) => setNoteDraft(event.target.value)}
+                  />
+                </section>
+              ) : (
+                <section className="learning-notes panel">
+                  <div className="creator-panel-head">
+                    <div>
+                      <span className="eyebrow">My Notes</span>
+                      <h3>Saved notes</h3>
+                      <p className="section-copy">
+                        Every saved note from this course appears here in one place.
+                      </p>
+                    </div>
+                  </div>
+                  {savedNotes.length ? (
+                    <div className="notes-collection">
+                      {savedNotes.map((item) => (
+                        <article key={item.lessonKey} className="note-card">
+                          <div className="note-card-head">
+                            <div>
+                              <span className="badge">{item.sectionTitle || "Lesson"}</span>
+                              <h3>{item.lessonTitle}</h3>
+                            </div>
+                            <button
+                              className="ghost-button"
+                              type="button"
+                              onClick={() => {
+                                setActiveLessonTitle(item.lessonTitle);
+                                setActiveView("lesson");
+                              }}
+                            >
+                              Open Lesson
+                            </button>
+                          </div>
+                          <p className="note-card-body">{item.content}</p>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="state-card compact">
+                      No saved notes yet. Save a lesson note and it will appear here.
+                    </div>
+                  )}
+                </section>
               )}
-
-              {activeLesson.resources?.length ? (
-                <div className="learning-resources">
-                  <h3>Resources</h3>
-                  <ul className="simple-list">
-                    {activeLesson.resources.map((link) => (
-                      <li key={link}>
-                        <a href={link} target="_blank" rel="noreferrer">
-                          {link}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
             </section>
           </>
         ) : (

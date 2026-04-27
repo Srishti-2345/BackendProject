@@ -1,9 +1,53 @@
 import DiscussionThread from "../models/DiscussionThread.js";
+import Course from "../models/Course.js";
+import Enrollment from "../models/Enrollment.js";
 import { awardXp } from "../utils/progression.js";
+
+const ensureCourseDiscussionAccess = async ({ contextId, user }) => {
+  const course = await Course.findById(contextId).select("instructor");
+  if (!course) {
+    const error = new Error("Course not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (!user) {
+    const error = new Error("Enroll in this course to access discussion");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  if (String(course.instructor) === String(user._id)) {
+    return;
+  }
+
+  const enrollment = await Enrollment.findOne({
+    course: contextId,
+    student: user._id,
+  }).select("_id");
+
+  if (!enrollment) {
+    const error = new Error("Enroll in this course to access discussion");
+    error.statusCode = 403;
+    throw error;
+  }
+};
+
+const ensureThreadAccess = async ({ thread, user }) => {
+  if (thread.contextType !== "course") {
+    return;
+  }
+
+  await ensureCourseDiscussionAccess({ contextId: thread.contextId, user });
+};
 
 export const getThreads = async (req, res, next) => {
   try {
     const { contextType, contextId } = req.query;
+
+    if (contextType === "course") {
+      await ensureCourseDiscussionAccess({ contextId, user: req.user });
+    }
 
     const threads = await DiscussionThread.find({ contextType, contextId })
       .populate("author", "name role")
@@ -19,6 +63,10 @@ export const getThreads = async (req, res, next) => {
 export const createThread = async (req, res, next) => {
   try {
     const { contextType, contextId, title, body, tag = "question" } = req.body;
+
+    if (contextType === "course") {
+      await ensureCourseDiscussionAccess({ contextId, user: req.user });
+    }
 
     const thread = await DiscussionThread.create({
       contextType,
@@ -47,6 +95,8 @@ export const replyToThread = async (req, res, next) => {
       error.statusCode = 404;
       throw error;
     }
+
+    await ensureThreadAccess({ thread, user: req.user });
 
     thread.replies.push({
       author: req.user._id,
@@ -113,4 +163,3 @@ export const acceptReply = async (req, res, next) => {
     next(error);
   }
 };
-

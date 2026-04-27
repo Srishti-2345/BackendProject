@@ -14,6 +14,35 @@ const progressSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const lessonNoteSchema = new mongoose.Schema(
+  {
+    lessonKey: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    lessonTitle: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    sectionTitle: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    content: {
+      type: String,
+      default: "",
+    },
+    updatedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false }
+);
+
 const enrollmentSchema = new mongoose.Schema(
   {
     student: {
@@ -39,6 +68,10 @@ const enrollmentSchema = new mongoose.Schema(
       type: [progressSchema],
       default: [],
     },
+    lessonNotes: {
+      type: [lessonNoteSchema],
+      default: [],
+    },
     completionPercentage: {
       type: Number,
       default: 0,
@@ -52,4 +85,3 @@ enrollmentSchema.index({ student: 1, course: 1 }, { unique: true });
 const Enrollment = mongoose.model("Enrollment", enrollmentSchema);
 
 export default Enrollment;
-

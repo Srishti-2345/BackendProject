@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import api from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -25,21 +25,6 @@ const initialBlogForm = {
   status: "draft",
 };
 
-const initialChallengeForm = {
-  title: "",
-  topicSlug: "react",
-  difficulty: "easy",
-  prompt: "",
-  constraints: "",
-  examples: "",
-  tags: "",
-  starterCode: "function solution() {\n  \n}\n\nmodule.exports = solution;",
-  publicTestCases: '[\n  {\n    "input": [],\n    "expectedOutput": "",\n    "explanation": ""\n  }\n]',
-  hiddenTestCases: "[]",
-  editorial: "",
-  status: "draft",
-};
-
 const initialOpenLearnForm = {
   fullName: "",
   phone: "",
@@ -49,13 +34,6 @@ const initialOpenLearnForm = {
   portfolioUrl: "",
   education: "",
   experienceSummary: "",
-};
-
-const sourceLabelMap = {
-  openlearn_email: "OpenLearn email",
-  openlearn_resume: "Resume review",
-  xp_unlock: "XP unlock",
-  manual_review: "Manual approval",
 };
 
 const reviewStatusOptions = [
@@ -71,16 +49,20 @@ const statusLabelMap = {
   rejected: "Rejected",
 };
 
+const sourceLabelMap = {
+  openlearn_email: "OpenLearn email",
+  openlearn_resume: "Resume review",
+  xp_unlock: "XP unlock",
+  manual_review: "Manual approval",
+};
+
 const toLineBreakText = (items = []) => items.join("\n");
-const toCommaText = (items = []) => items.join(", ");
-const toJsonText = (value) => JSON.stringify(value || [], null, 2);
 const getReviewNotes = (item) => item.reviewNotes || item.feedback || "";
 
 const InstructorDashboardPage = () => {
   const { user } = useAuth();
   const [courseForm, setCourseForm] = useState(initialCourseForm);
   const [blogForm, setBlogForm] = useState(initialBlogForm);
-  const [challengeForm, setChallengeForm] = useState(initialChallengeForm);
   const [openLearnForm, setOpenLearnForm] = useState(() => ({
     ...initialOpenLearnForm,
     fullName: user?.name || "",
@@ -88,7 +70,6 @@ const InstructorDashboardPage = () => {
   const [resumeFile, setResumeFile] = useState(null);
   const [courses, setCourses] = useState([]);
   const [blogs, setBlogs] = useState([]);
-  const [challenges, setChallenges] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [creatorDashboard, setCreatorDashboard] = useState(null);
   const [readiness, setReadiness] = useState([]);
@@ -98,31 +79,13 @@ const InstructorDashboardPage = () => {
   const [openLearnSubmitting, setOpenLearnSubmitting] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState("");
   const [editingBlogId, setEditingBlogId] = useState("");
-  const [editingChallengeId, setEditingChallengeId] = useState("");
 
-  const applyTopicDefaults = (topicSlug, formSetter, currentForm, availableTopics = topics) => {
-    const topic = availableTopics.find((item) => item.slug === topicSlug);
-    formSetter({
-      ...currentForm,
-      topicSlug,
-      ...(topic ? { category: topic.category } : {}),
-    });
-  };
-
-  const resetCourseEditor = () => {
-    setCourseForm(initialCourseForm);
-    setEditingCourseId("");
-  };
-
-  const resetBlogEditor = () => {
-    setBlogForm(initialBlogForm);
-    setEditingBlogId("");
-  };
-
-  const resetChallengeEditor = () => {
-    setChallengeForm(initialChallengeForm);
-    setEditingChallengeId("");
-  };
+  const accessibleTopics = useMemo(
+    () => readiness.filter((item) => item.contributionAccess).map((item) => item.topic),
+    [readiness]
+  );
+  const hasUploadAccess = accessibleTopics.length > 0;
+  const contributorAccess = creatorDashboard?.contributorAccess;
 
   const loadInstructorData = async () => {
     const [
@@ -132,7 +95,6 @@ const InstructorDashboardPage = () => {
       readinessResponse,
       topicsResponse,
       blogsResponse,
-      challengesResponse,
     ] = await Promise.all([
       api.get("/courses/instructor/me"),
       api.get("/courses/instructor/analytics"),
@@ -140,7 +102,6 @@ const InstructorDashboardPage = () => {
       api.get("/creator/readiness"),
       api.get("/topics"),
       api.get("/blogs/me"),
-      api.get("/challenges/me"),
     ]);
 
     setCourses(coursesResponse.data.courses);
@@ -149,11 +110,10 @@ const InstructorDashboardPage = () => {
     setReadiness(readinessResponse.data.readiness);
     setTopics(topicsResponse.data.topics);
     setBlogs(blogsResponse.data.blogs);
-    setChallenges(challengesResponse.data.challenges);
   };
 
   useEffect(() => {
-    loadInstructorData().catch((error) => console.error(error));
+    loadInstructorData().catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -166,22 +126,18 @@ const InstructorDashboardPage = () => {
   }, [user]);
 
   useEffect(() => {
-    if (topics.length) {
-      const selectedTopic = topics.find((topic) => topic.slug === courseForm.topicSlug);
-      if (selectedTopic && selectedTopic.category !== courseForm.category) {
-        setCourseForm((current) => ({
-          ...current,
-          category: selectedTopic.category,
-        }));
-      }
+    if (!topics.length) {
+      return;
+    }
+
+    const selectedTopic = topics.find((topic) => topic.slug === courseForm.topicSlug);
+    if (selectedTopic && selectedTopic.category !== courseForm.category) {
+      setCourseForm((current) => ({
+        ...current,
+        category: selectedTopic.category,
+      }));
     }
   }, [topics, courseForm.topicSlug, courseForm.category]);
-
-  const contributorAccess = creatorDashboard?.contributorAccess;
-  const accessibleTopics = readiness
-    .filter((item) => item.contributionAccess)
-    .map((item) => item.topic);
-  const hasUploadAccess = accessibleTopics.length > 0;
 
   useEffect(() => {
     if (!accessibleTopics.length) {
@@ -189,7 +145,6 @@ const InstructorDashboardPage = () => {
     }
 
     const firstTopic = accessibleTopics[0];
-
     if (!accessibleTopics.some((topic) => topic.slug === courseForm.topicSlug)) {
       setCourseForm((current) => ({
         ...current,
@@ -204,14 +159,26 @@ const InstructorDashboardPage = () => {
         topicSlug: firstTopic.slug,
       }));
     }
+  }, [accessibleTopics, blogForm.topicSlug, courseForm.topicSlug]);
 
-    if (!accessibleTopics.some((topic) => topic.slug === challengeForm.topicSlug)) {
-      setChallengeForm((current) => ({
-        ...current,
-        topicSlug: firstTopic.slug,
-      }));
-    }
-  }, [accessibleTopics, blogForm.topicSlug, challengeForm.topicSlug, courseForm.topicSlug]);
+  const resetCourseEditor = () => {
+    setCourseForm(initialCourseForm);
+    setEditingCourseId("");
+  };
+
+  const resetBlogEditor = () => {
+    setBlogForm(initialBlogForm);
+    setEditingBlogId("");
+  };
+
+  const applyTopicDefaults = (topicSlug, formSetter, currentForm, availableTopics = topics) => {
+    const topic = availableTopics.find((item) => item.slug === topicSlug);
+    formSetter({
+      ...currentForm,
+      topicSlug,
+      ...(topic ? { category: topic.category } : {}),
+    });
+  };
 
   const handleCourseSubmit = async (event) => {
     event.preventDefault();
@@ -271,9 +238,7 @@ const InstructorDashboardPage = () => {
       } else {
         await api.post("/blogs", blogForm);
         setMessage(
-          blogForm.status === "pending_review"
-            ? "Blog submitted for review."
-            : "Blog draft saved."
+          blogForm.status === "pending_review" ? "Blog submitted for review." : "Blog draft saved."
         );
       }
 
@@ -281,53 +246,6 @@ const InstructorDashboardPage = () => {
       await loadInstructorData();
     } catch (error) {
       setMessage(error.response?.data?.message || "Could not save blog draft");
-    }
-  };
-
-  const handleChallengeSubmit = async (event) => {
-    event.preventDefault();
-
-    try {
-      const payload = {
-        title: challengeForm.title,
-        topicSlug: challengeForm.topicSlug,
-        difficulty: challengeForm.difficulty,
-        prompt: challengeForm.prompt,
-        constraints: challengeForm.constraints
-          .split("\n")
-          .map((item) => item.trim())
-          .filter(Boolean),
-        examples: challengeForm.examples
-          .split("\n")
-          .map((item) => item.trim())
-          .filter(Boolean),
-        tags: challengeForm.tags
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
-        starterCode: challengeForm.starterCode,
-        publicTestCases: JSON.parse(challengeForm.publicTestCases),
-        hiddenTestCases: JSON.parse(challengeForm.hiddenTestCases),
-        editorial: challengeForm.editorial,
-        status: challengeForm.status,
-      };
-
-      if (editingChallengeId) {
-        await api.put(`/challenges/${editingChallengeId}`, payload);
-        setMessage("Challenge updated successfully.");
-      } else {
-        await api.post("/challenges", payload);
-        setMessage(
-          payload.status === "pending_review"
-            ? "Challenge submitted for review."
-            : "Challenge draft saved."
-        );
-      }
-
-      resetChallengeEditor();
-      await loadInstructorData();
-    } catch (error) {
-      setMessage(error.response?.data?.message || "Could not save challenge");
     }
   };
 
@@ -361,14 +279,15 @@ const InstructorDashboardPage = () => {
       formData.append("resume", resumeFile);
 
       const { data } = await api.post("/creator/openlearn/applications", formData);
-
       const approvedTopics = data.contributorAccess?.approvedTopics || [];
+
       setOpenLearnMessage({
         tone: "success-note",
         text: approvedTopics.length
           ? `Resume review completed. Unlocked topics: ${approvedTopics.join(", ")}.`
           : data.application?.analysisSummary || "Resume review completed.",
       });
+
       setResumeFile(null);
       await loadInstructorData();
     } catch (error) {
@@ -427,27 +346,6 @@ const InstructorDashboardPage = () => {
     });
   };
 
-  const startChallengeEdit = (challenge) => {
-    setEditingChallengeId(challenge._id);
-    setChallengeForm({
-      title: challenge.title || "",
-      topicSlug: challenge.topicSlug || accessibleTopics[0]?.slug || "react",
-      difficulty: challenge.difficulty || "easy",
-      prompt: challenge.prompt || "",
-      constraints: toLineBreakText(challenge.constraints),
-      examples: toLineBreakText(challenge.examples),
-      tags: toCommaText(challenge.tags),
-      starterCode: challenge.starterCode || initialChallengeForm.starterCode,
-      publicTestCases: toJsonText(challenge.publicTestCases),
-      hiddenTestCases: toJsonText(challenge.hiddenTestCases),
-      editorial: challenge.editorial || "",
-      status:
-        challenge.status === "published" || challenge.status === "rejected"
-          ? "draft"
-          : challenge.status || "draft",
-    });
-  };
-
   return (
     <section className="section-stack creator-shell">
       <div className="section-header">
@@ -461,10 +359,7 @@ const InstructorDashboardPage = () => {
         <div className="creator-hero-copy">
           <span className="eyebrow">Structured overview</span>
           <h3>Everything important in one place</h3>
-          <p>
-            Track contribution access, submit content for approval, and respond to reviewer
-            feedback from a single workflow.
-          </p>
+          <p>Track access, submit content for review, and monitor feedback from one workspace.</p>
         </div>
         {analytics && creatorDashboard ? (
           <div className="stats-grid creator-stats">
@@ -499,7 +394,7 @@ const InstructorDashboardPage = () => {
                 <h3>Contribution access</h3>
               </div>
             </div>
-            {creatorDashboard ? (
+            {contributorAccess ? (
               <div className="list-stack">
                 <div className="creator-access-card">
                   <div>
@@ -507,7 +402,7 @@ const InstructorDashboardPage = () => {
                     <p>
                       {contributorAccess.hasOpenLearnEmail
                         ? "Your account already has platform-wide contributor access."
-                        : "Use an @openlearn.com email for immediate contributor access."}
+                        : "Use an @openlearn.com email for instant contributor access."}
                     </p>
                   </div>
                   <span className="badge">
@@ -548,8 +443,12 @@ const InstructorDashboardPage = () => {
                       {item.stat.xp}/{item.topic.uploaderRequirements.xpThreshold} XP
                     </p>
                     <p>
-                      {item.stat.challengeSolvedCount}/
-                      {item.topic.uploaderRequirements.challengeSolvedThreshold} solved
+                      {item.stat.quizCompletedCount}/
+                      {item.topic.uploaderRequirements.quizCompletedThreshold} quizzes completed
+                    </p>
+                    <p>
+                      {item.stat.masteredQuizCount}/
+                      {item.topic.uploaderRequirements.masteredQuizThreshold} strong scores
                     </p>
                   </div>
                   {item.contributionAccess ? (
@@ -572,182 +471,68 @@ const InstructorDashboardPage = () => {
             </div>
           </div>
 
-          <div className="panel">
+          <form className="panel creator-form-panel" onSubmit={handleOpenLearnSubmit}>
             <div className="creator-panel-head">
               <div>
-                <span className="eyebrow">Pipeline</span>
-                <h3>Content status</h3>
+                <span className="eyebrow">Resume route</span>
+                <h3>OpenLearn contributor review</h3>
               </div>
             </div>
-            <div className="list-stack">
-              {creatorDashboard ? (
-                <>
-                  <div className="list-item">
-                    <div>
-                      <strong>Drafts</strong>
-                      <p>Content not submitted yet</p>
-                    </div>
-                    <span>{creatorDashboard.contentPipeline.drafts}</span>
-                  </div>
-                  <div className="list-item">
-                    <div>
-                      <strong>Under review</strong>
-                      <p>Awaiting reviewer decision</p>
-                    </div>
-                    <span>{creatorDashboard.contentPipeline.underReview}</span>
-                  </div>
-                  <div className="list-item">
-                    <div>
-                      <strong>Needs changes</strong>
-                      <p>Revise and resubmit</p>
-                    </div>
-                    <span>{creatorDashboard.contentPipeline.needsChanges}</span>
-                  </div>
-                  <div className="list-item">
-                    <div>
-                      <strong>Published</strong>
-                      <p>Live content in the community</p>
-                    </div>
-                    <span>{creatorDashboard.contentPipeline.published}</span>
-                  </div>
-                  <div className="list-item">
-                    <div>
-                      <strong>Rejected</strong>
-                      <p>Stopped before publication</p>
-                    </div>
-                    <span>{creatorDashboard.contentPipeline.rejected}</span>
-                  </div>
-                </>
-              ) : (
-                <div className="state-card compact">Loading creator pipeline...</div>
-              )}
-            </div>
-          </div>
+            {openLearnMessage ? <div className={openLearnMessage.tone}>{openLearnMessage.text}</div> : null}
+            <input
+              placeholder="Full name"
+              value={openLearnForm.fullName}
+              onChange={(event) =>
+                setOpenLearnForm({ ...openLearnForm, fullName: event.target.value })
+              }
+            />
+            <input
+              placeholder="Current role"
+              value={openLearnForm.currentRole}
+              onChange={(event) =>
+                setOpenLearnForm({ ...openLearnForm, currentRole: event.target.value })
+              }
+            />
+            <textarea
+              rows="4"
+              placeholder="Experience summary"
+              value={openLearnForm.experienceSummary}
+              onChange={(event) =>
+                setOpenLearnForm({ ...openLearnForm, experienceSummary: event.target.value })
+              }
+            />
+            <label className="creator-upload-field">
+              <span>Resume PDF</span>
+              <small>{resumeFile ? resumeFile.name : "Upload a PDF resume"}</small>
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={(event) => setResumeFile(event.target.files?.[0] || null)}
+              />
+            </label>
+            <button className="primary-button creator-submit" type="submit" disabled={openLearnSubmitting}>
+              {openLearnSubmitting ? "Processing..." : "Submit for review"}
+            </button>
+          </form>
         </aside>
 
         <div className="creator-content">
-          <section className="creator-section">
-            <div className="creator-section-head">
-              <div>
-                <span className="eyebrow">Apply</span>
-                <h3>OpenLearn contributor review</h3>
-              </div>
-              <p>Upload a PDF resume once and get topic suggestions from your profile.</p>
-            </div>
-            <form className="panel creator-form-panel" onSubmit={handleOpenLearnSubmit}>
-              {openLearnMessage ? (
-                <div className={openLearnMessage.tone}>{openLearnMessage.text}</div>
-              ) : null}
-              <div className="creator-form-grid">
-                <input
-                  placeholder="Full name"
-                  value={openLearnForm.fullName}
-                  disabled={openLearnSubmitting}
-                  onChange={(event) =>
-                    setOpenLearnForm({ ...openLearnForm, fullName: event.target.value })
-                  }
-                />
-                <input
-                  placeholder="Phone"
-                  value={openLearnForm.phone}
-                  disabled={openLearnSubmitting}
-                  onChange={(event) =>
-                    setOpenLearnForm({ ...openLearnForm, phone: event.target.value })
-                  }
-                />
-                <input
-                  placeholder="Current role"
-                  value={openLearnForm.currentRole}
-                  disabled={openLearnSubmitting}
-                  onChange={(event) =>
-                    setOpenLearnForm({ ...openLearnForm, currentRole: event.target.value })
-                  }
-                />
-                <input
-                  type="number"
-                  placeholder="Years of experience"
-                  value={openLearnForm.yearsOfExperience}
-                  disabled={openLearnSubmitting}
-                  onChange={(event) =>
-                    setOpenLearnForm({ ...openLearnForm, yearsOfExperience: event.target.value })
-                  }
-                />
-                <input
-                  placeholder="LinkedIn URL"
-                  value={openLearnForm.linkedinUrl}
-                  disabled={openLearnSubmitting}
-                  onChange={(event) =>
-                    setOpenLearnForm({ ...openLearnForm, linkedinUrl: event.target.value })
-                  }
-                />
-                <input
-                  placeholder="Portfolio URL"
-                  value={openLearnForm.portfolioUrl}
-                  disabled={openLearnSubmitting}
-                  onChange={(event) =>
-                    setOpenLearnForm({ ...openLearnForm, portfolioUrl: event.target.value })
-                  }
-                />
-              </div>
-              <input
-                placeholder="Education"
-                value={openLearnForm.education}
-                disabled={openLearnSubmitting}
-                onChange={(event) =>
-                  setOpenLearnForm({ ...openLearnForm, education: event.target.value })
-                }
-              />
-              <textarea
-                rows="4"
-                placeholder="Brief summary of your experience"
-                value={openLearnForm.experienceSummary}
-                disabled={openLearnSubmitting}
-                onChange={(event) =>
-                  setOpenLearnForm({ ...openLearnForm, experienceSummary: event.target.value })
-                }
-              />
-              <label className="creator-upload-field">
-                <span>Upload resume PDF</span>
-                <input
-                  type="file"
-                  accept="application/pdf,.pdf"
-                  disabled={openLearnSubmitting}
-                  onChange={(event) => setResumeFile(event.target.files?.[0] || null)}
-                />
-                <small>
-                  {openLearnSubmitting
-                    ? "Analyzing your PDF and unlocking topics..."
-                    : resumeFile
-                      ? resumeFile.name
-                      : "PDF only, up to 5 MB."}
-                </small>
-              </label>
-              <button
-                className="primary-button creator-submit"
-                type="submit"
-                disabled={openLearnSubmitting}
-              >
-                {openLearnSubmitting ? "Analyzing Resume..." : "Analyze Resume and Apply"}
-              </button>
-            </form>
-          </section>
-
           {hasUploadAccess ? (
             <>
               <section className="creator-section">
                 <div className="creator-section-head">
                   <div>
-                    <span className="eyebrow">Create</span>
-                    <h3>Build content and send it to review</h3>
+                    <span className="eyebrow">Build</span>
+                    <h3>Course publishing</h3>
                   </div>
-                  <p>Creators now publish through reviewer approval, not directly to learners.</p>
+                  <p>Create course drafts and send them into the reviewer queue.</p>
                 </div>
                 <div className="creator-forms-grid">
                   <form className="panel creator-form-panel" onSubmit={handleCourseSubmit}>
                     <div className="creator-panel-head">
                       <div>
-                        <h3>{editingCourseId ? "Edit course" : "Create a course"}</h3>
-                        <p>Build a structured learning path for a topic you can contribute to.</p>
+                        <h3>{editingCourseId ? "Edit course" : "Create a course draft"}</h3>
+                        <p>Use one topic you already unlocked.</p>
                       </div>
                       {editingCourseId ? (
                         <button className="ghost-button" type="button" onClick={resetCourseEditor}>
@@ -758,20 +543,16 @@ const InstructorDashboardPage = () => {
                     <input
                       placeholder="Course title"
                       value={courseForm.title}
-                      onChange={(event) =>
-                        setCourseForm({ ...courseForm, title: event.target.value })
-                      }
+                      onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })}
                     />
                     <input
                       placeholder="Subtitle"
                       value={courseForm.subtitle}
-                      onChange={(event) =>
-                        setCourseForm({ ...courseForm, subtitle: event.target.value })
-                      }
+                      onChange={(event) => setCourseForm({ ...courseForm, subtitle: event.target.value })}
                     />
                     <textarea
-                      placeholder="Description"
                       rows="5"
+                      placeholder="Course description"
                       value={courseForm.description}
                       onChange={(event) =>
                         setCourseForm({ ...courseForm, description: event.target.value })
@@ -787,27 +568,18 @@ const InstructorDashboardPage = () => {
                     <div className="split-row">
                       <select
                         value={courseForm.category}
-                        onChange={(event) =>
-                          setCourseForm({ ...courseForm, category: event.target.value })
-                        }
+                        onChange={(event) => setCourseForm({ ...courseForm, category: event.target.value })}
                       >
-                        {[...new Set(accessibleTopics.map((topic) => topic.category))].map(
-                          (category) => (
-                            <option key={category} value={category}>
-                              {category}
-                            </option>
-                          )
-                        )}
+                        {[...new Set(accessibleTopics.map((topic) => topic.category))].map((category) => (
+                          <option key={category} value={category}>
+                            {category}
+                          </option>
+                        ))}
                       </select>
                       <select
                         value={courseForm.topicSlug}
                         onChange={(event) =>
-                          applyTopicDefaults(
-                            event.target.value,
-                            setCourseForm,
-                            courseForm,
-                            accessibleTopics
-                          )
+                          applyTopicDefaults(event.target.value, setCourseForm, courseForm, accessibleTopics)
                         }
                       >
                         {accessibleTopics.map((topic) => (
@@ -818,9 +590,7 @@ const InstructorDashboardPage = () => {
                       </select>
                       <select
                         value={courseForm.level}
-                        onChange={(event) =>
-                          setCourseForm({ ...courseForm, level: event.target.value })
-                        }
+                        onChange={(event) => setCourseForm({ ...courseForm, level: event.target.value })}
                       >
                         <option value="beginner">Beginner</option>
                         <option value="intermediate">Intermediate</option>
@@ -832,15 +602,11 @@ const InstructorDashboardPage = () => {
                         type="number"
                         placeholder="Price"
                         value={courseForm.price}
-                        onChange={(event) =>
-                          setCourseForm({ ...courseForm, price: event.target.value })
-                        }
+                        onChange={(event) => setCourseForm({ ...courseForm, price: event.target.value })}
                       />
                       <select
                         value={courseForm.status}
-                        onChange={(event) =>
-                          setCourseForm({ ...courseForm, status: event.target.value })
-                        }
+                        onChange={(event) => setCourseForm({ ...courseForm, status: event.target.value })}
                       >
                         {reviewStatusOptions.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -850,16 +616,16 @@ const InstructorDashboardPage = () => {
                       </select>
                     </div>
                     <textarea
-                      placeholder="Learning outcomes, one per line"
                       rows="4"
+                      placeholder="Learning outcomes, one per line"
                       value={courseForm.learningOutcomes}
                       onChange={(event) =>
                         setCourseForm({ ...courseForm, learningOutcomes: event.target.value })
                       }
                     />
                     <textarea
-                      placeholder="Requirements, one per line"
                       rows="4"
+                      placeholder="Requirements, one per line"
                       value={courseForm.requirements}
                       onChange={(event) =>
                         setCourseForm({ ...courseForm, requirements: event.target.value })
@@ -870,132 +636,39 @@ const InstructorDashboardPage = () => {
                     </button>
                   </form>
 
-                  <form className="panel creator-form-panel" onSubmit={handleChallengeSubmit}>
+                  <div className="panel">
                     <div className="creator-panel-head">
                       <div>
-                        <h3>{editingChallengeId ? "Edit challenge" : "Create a challenge"}</h3>
-                        <p>Upload a coding task with test cases and starter code.</p>
+                        <h3>Your courses</h3>
+                        <p>Courses waiting for review or already published.</p>
                       </div>
-                      {editingChallengeId ? (
-                        <button
-                          className="ghost-button"
-                          type="button"
-                          onClick={resetChallengeEditor}
-                        >
-                          New challenge
-                        </button>
-                      ) : null}
                     </div>
-                    <input
-                      placeholder="Challenge title"
-                      value={challengeForm.title}
-                      onChange={(event) =>
-                        setChallengeForm({ ...challengeForm, title: event.target.value })
-                      }
-                    />
-                    <div className="split-row">
-                      <select
-                        value={challengeForm.topicSlug}
-                        onChange={(event) =>
-                          setChallengeForm({ ...challengeForm, topicSlug: event.target.value })
-                        }
-                      >
-                        {accessibleTopics.map((topic) => (
-                          <option key={topic._id} value={topic.slug}>
-                            {topic.name}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        value={challengeForm.difficulty}
-                        onChange={(event) =>
-                          setChallengeForm({ ...challengeForm, difficulty: event.target.value })
-                        }
-                      >
-                        <option value="easy">Easy</option>
-                        <option value="medium">Medium</option>
-                        <option value="hard">Hard</option>
-                      </select>
+                    <div className="list-stack">
+                      {courses.length ? (
+                        courses.map((course) => (
+                          <div key={course._id} className="reviewable-list-card">
+                            <div className="reviewable-list-head">
+                              <div>
+                                <strong>{course.title}</strong>
+                                <p>
+                                  {course.topicSlug} - {course.category}
+                                </p>
+                              </div>
+                              <span className="badge">{statusLabelMap[course.status] || course.status}</span>
+                            </div>
+                            {getReviewNotes(course) ? (
+                              <p className="review-note-inline">{getReviewNotes(course)}</p>
+                            ) : null}
+                            <button className="ghost-button" type="button" onClick={() => startCourseEdit(course)}>
+                              Edit
+                            </button>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="state-card compact">No courses created yet.</div>
+                      )}
                     </div>
-                    <textarea
-                      rows="5"
-                      placeholder="Prompt"
-                      value={challengeForm.prompt}
-                      onChange={(event) =>
-                        setChallengeForm({ ...challengeForm, prompt: event.target.value })
-                      }
-                    />
-                    <textarea
-                      rows="3"
-                      placeholder="Constraints, one per line"
-                      value={challengeForm.constraints}
-                      onChange={(event) =>
-                        setChallengeForm({ ...challengeForm, constraints: event.target.value })
-                      }
-                    />
-                    <textarea
-                      rows="3"
-                      placeholder="Examples, one per line"
-                      value={challengeForm.examples}
-                      onChange={(event) =>
-                        setChallengeForm({ ...challengeForm, examples: event.target.value })
-                      }
-                    />
-                    <input
-                      placeholder="Tags, comma separated"
-                      value={challengeForm.tags}
-                      onChange={(event) =>
-                        setChallengeForm({ ...challengeForm, tags: event.target.value })
-                      }
-                    />
-                    <textarea
-                      rows="7"
-                      placeholder="Starter code"
-                      value={challengeForm.starterCode}
-                      onChange={(event) =>
-                        setChallengeForm({ ...challengeForm, starterCode: event.target.value })
-                      }
-                    />
-                    <textarea
-                      rows="6"
-                      placeholder='Public test cases as JSON, e.g. [{"input":[1],"expectedOutput":1}]'
-                      value={challengeForm.publicTestCases}
-                      onChange={(event) =>
-                        setChallengeForm({ ...challengeForm, publicTestCases: event.target.value })
-                      }
-                    />
-                    <textarea
-                      rows="4"
-                      placeholder='Hidden test cases as JSON, e.g. [{"input":[1],"expectedOutput":1}]'
-                      value={challengeForm.hiddenTestCases}
-                      onChange={(event) =>
-                        setChallengeForm({ ...challengeForm, hiddenTestCases: event.target.value })
-                      }
-                    />
-                    <textarea
-                      rows="4"
-                      placeholder="Editorial or solution notes"
-                      value={challengeForm.editorial}
-                      onChange={(event) =>
-                        setChallengeForm({ ...challengeForm, editorial: event.target.value })
-                      }
-                    />
-                    <select
-                      value={challengeForm.status}
-                      onChange={(event) =>
-                        setChallengeForm({ ...challengeForm, status: event.target.value })
-                      }
-                    >
-                      {reviewStatusOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <button className="primary-button creator-submit" type="submit">
-                      {editingChallengeId ? "Update challenge" : "Save challenge"}
-                    </button>
-                  </form>
+                  </div>
                 </div>
               </section>
 
@@ -1003,16 +676,16 @@ const InstructorDashboardPage = () => {
                 <div className="creator-section-head">
                   <div>
                     <span className="eyebrow">Write</span>
-                    <h3>Blog drafts and content library</h3>
+                    <h3>Blog publishing</h3>
                   </div>
-                  <p>Draft blogs, submit them to review, and respond to reviewer guidance.</p>
+                  <p>Draft topic writeups and send them for review when they are ready.</p>
                 </div>
                 <div className="creator-forms-grid">
                   <form className="panel creator-form-panel" onSubmit={handleBlogSubmit}>
                     <div className="creator-panel-head">
                       <div>
                         <h3>{editingBlogId ? "Edit blog" : "Create a blog draft"}</h3>
-                        <p>Share topic knowledge in article form and submit when ready.</p>
+                        <p>Share topic knowledge in article form.</p>
                       </div>
                       {editingBlogId ? (
                         <button className="ghost-button" type="button" onClick={resetBlogEditor}>
@@ -1023,22 +696,16 @@ const InstructorDashboardPage = () => {
                     <input
                       placeholder="Blog title"
                       value={blogForm.title}
-                      onChange={(event) =>
-                        setBlogForm({ ...blogForm, title: event.target.value })
-                      }
+                      onChange={(event) => setBlogForm({ ...blogForm, title: event.target.value })}
                     />
                     <input
                       placeholder="Short excerpt"
                       value={blogForm.excerpt}
-                      onChange={(event) =>
-                        setBlogForm({ ...blogForm, excerpt: event.target.value })
-                      }
+                      onChange={(event) => setBlogForm({ ...blogForm, excerpt: event.target.value })}
                     />
                     <select
                       value={blogForm.topicSlug}
-                      onChange={(event) =>
-                        setBlogForm({ ...blogForm, topicSlug: event.target.value })
-                      }
+                      onChange={(event) => setBlogForm({ ...blogForm, topicSlug: event.target.value })}
                     >
                       {accessibleTopics.map((topic) => (
                         <option key={topic._id} value={topic.slug}>
@@ -1050,9 +717,7 @@ const InstructorDashboardPage = () => {
                       rows="8"
                       placeholder="Write your blog draft"
                       value={blogForm.content}
-                      onChange={(event) =>
-                        setBlogForm({ ...blogForm, content: event.target.value })
-                      }
+                      onChange={(event) => setBlogForm({ ...blogForm, content: event.target.value })}
                     />
                     <select
                       value={blogForm.status}
@@ -1069,120 +734,35 @@ const InstructorDashboardPage = () => {
                     </button>
                   </form>
 
-                  <div className="creator-lists-grid">
-                    <div className="panel">
-                      <div className="creator-panel-head">
-                        <div>
-                          <h3>Your courses</h3>
-                          <p>Publish through the reviewer queue.</p>
-                        </div>
-                      </div>
-                      <div className="list-stack">
-                        {courses.length ? (
-                          courses.map((course) => (
-                            <div key={course._id} className="reviewable-list-card">
-                              <div className="reviewable-list-head">
-                                <div>
-                                  <strong>{course.title}</strong>
-                                  <p>
-                                    {course.topicSlug} - {course.category}
-                                  </p>
-                                </div>
-                                <span className="badge">{statusLabelMap[course.status] || course.status}</span>
-                              </div>
-                              {getReviewNotes(course) ? (
-                                <p className="review-note-inline">{getReviewNotes(course)}</p>
-                              ) : null}
-                              <button
-                                className="ghost-button"
-                                type="button"
-                                onClick={() => startCourseEdit(course)}
-                              >
-                                Edit
-                              </button>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="state-card compact">No courses created yet.</div>
-                        )}
+                  <div className="panel">
+                    <div className="creator-panel-head">
+                      <div>
+                        <h3>Your blog drafts</h3>
+                        <p>Drafts waiting for polish, review, or revision.</p>
                       </div>
                     </div>
-
-                    <div className="panel">
-                      <div className="creator-panel-head">
-                        <div>
-                          <h3>Your challenges</h3>
-                          <p>Upload, review, revise, and resubmit from here.</p>
-                        </div>
-                      </div>
-                      <div className="list-stack">
-                        {challenges.length ? (
-                          challenges.map((challenge) => (
-                            <div key={challenge._id} className="reviewable-list-card">
-                              <div className="reviewable-list-head">
-                                <div>
-                                  <strong>{challenge.title}</strong>
-                                  <p>
-                                    {challenge.topicSlug} - {challenge.difficulty}
-                                  </p>
-                                </div>
-                                <span className="badge">
-                                  {statusLabelMap[challenge.status] || challenge.status}
-                                </span>
+                    <div className="list-stack">
+                      {blogs.length ? (
+                        blogs.map((blog) => (
+                          <div key={blog._id} className="reviewable-list-card">
+                            <div className="reviewable-list-head">
+                              <div>
+                                <strong>{blog.title}</strong>
+                                <p>{blog.topicSlug}</p>
                               </div>
-                              <p>{challenge.solveCount} solves</p>
-                              {getReviewNotes(challenge) ? (
-                                <p className="review-note-inline">{getReviewNotes(challenge)}</p>
-                              ) : null}
-                              <button
-                                className="ghost-button"
-                                type="button"
-                                onClick={() => startChallengeEdit(challenge)}
-                              >
-                                Edit
-                              </button>
+                              <span className="badge">{statusLabelMap[blog.status] || blog.status}</span>
                             </div>
-                          ))
-                        ) : (
-                          <div className="state-card compact">No challenges created yet.</div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="panel">
-                      <div className="creator-panel-head">
-                        <div>
-                          <h3>Your blog drafts</h3>
-                          <p>Drafts waiting for polish or review.</p>
-                        </div>
-                      </div>
-                      <div className="list-stack">
-                        {blogs.length ? (
-                          blogs.map((blog) => (
-                            <div key={blog._id} className="reviewable-list-card">
-                              <div className="reviewable-list-head">
-                                <div>
-                                  <strong>{blog.title}</strong>
-                                  <p>{blog.topicSlug}</p>
-                                </div>
-                                <span className="badge">{statusLabelMap[blog.status] || blog.status}</span>
-                              </div>
-                              {getReviewNotes(blog) ? (
-                                <p className="review-note-inline">{getReviewNotes(blog)}</p>
-                              ) : null}
-                              <button
-                                className="ghost-button"
-                                type="button"
-                                onClick={() => startBlogEdit(blog)}
-                              >
-                                Edit
-                              </button>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="state-card compact">No blog drafts yet.</div>
-                        )}
-                      </div>
+                            {getReviewNotes(blog) ? (
+                              <p className="review-note-inline">{getReviewNotes(blog)}</p>
+                            ) : null}
+                            <button className="ghost-button" type="button" onClick={() => startBlogEdit(blog)}>
+                              Edit
+                            </button>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="state-card compact">No blog drafts yet.</div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1193,10 +773,7 @@ const InstructorDashboardPage = () => {
               <div className="panel creator-locked-panel">
                 <span className="eyebrow">Upload Access Required</span>
                 <h3>Creation tools appear after approval</h3>
-                <p>
-                  Course, challenge, and blog upload options are shown only when you have
-                  contribution access in at least one topic.
-                </p>
+                <p>Course and blog upload options are shown only after you unlock contribution access in a topic.</p>
               </div>
             </section>
           )}

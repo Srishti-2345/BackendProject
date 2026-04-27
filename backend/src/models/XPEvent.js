@@ -16,7 +16,7 @@ const xpEventSchema = new mongoose.Schema(
       enum: [
         "lesson_watch",
         "course_completion",
-        "challenge_solved",
+        "quiz_completed",
         "discussion_helpful",
         "content_approved",
         "streak_bonus",
@@ -38,4 +38,3 @@ const xpEventSchema = new mongoose.Schema(
 const XPEvent = mongoose.model("XPEvent", xpEventSchema);
 
 export default XPEvent;
-

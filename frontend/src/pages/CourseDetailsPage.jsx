@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import api from "../api/client.js";
-import DiscussionPanel from "../components/DiscussionPanel.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
 const CourseDetailsPage = () => {
@@ -110,8 +109,14 @@ const CourseDetailsPage = () => {
           </div>
         </aside>
       </div>
-
-      <DiscussionPanel contextType="course" contextId={course._id} topicSlug={course.topicSlug} />
+      <div className="panel discussion-locked-panel">
+        <span className="eyebrow">Course discussion</span>
+        <h3>Discussion unlocks after enrollment</h3>
+        <p>
+          Join the course to open the learner discussion space, ask questions, and follow
+          implementation threads alongside the lessons.
+        </p>
+      </div>
     </section>
   );
 };

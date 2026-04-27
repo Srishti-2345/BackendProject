@@ -8,8 +8,8 @@ const defaultTopics = [
     category: "Web Development",
     uploaderRequirements: {
       xpThreshold: 600,
-      challengeSolvedThreshold: 2,
-      mediumSolvedThreshold: 1,
+      quizCompletedThreshold: 2,
+      masteredQuizThreshold: 1,
     },
   },
   {
@@ -19,8 +19,8 @@ const defaultTopics = [
     category: "Programming",
     uploaderRequirements: {
       xpThreshold: 800,
-      challengeSolvedThreshold: 3,
-      mediumSolvedThreshold: 1,
+      quizCompletedThreshold: 3,
+      masteredQuizThreshold: 1,
     },
   },
 ];

@@ -1,5 +1,4 @@
 import BlogPost from "../models/BlogPost.js";
-import Challenge from "../models/Challenge.js";
 import Course from "../models/Course.js";
 import CreatorApplication from "../models/CreatorApplication.js";
 import DiscussionThread from "../models/DiscussionThread.js";
@@ -31,29 +30,6 @@ const reviewableConfigs = {
       content: "",
       excerpt: "",
       difficulty: "",
-    }),
-  },
-  challenge: {
-    Model: Challenge,
-    ownerField: "createdBy",
-    ownerLabel: "creator",
-    pendingStatuses: ["pending_review"],
-    recentStatuses: ["published", "needs_changes", "rejected"],
-    populate: "createdBy",
-    toDetails: (item) => ({
-      category: "",
-      level: "",
-      subtitle: "",
-      description: "",
-      sections: [],
-      constraints: item.constraints || [],
-      examples: item.examples || [],
-      publicTestCases: item.publicTestCases || [],
-      starterCode: item.starterCode || "",
-      content: "",
-      excerpt: "",
-      difficulty: item.difficulty || "",
-      prompt: item.prompt || "",
     }),
   },
   blog: {
@@ -121,8 +97,8 @@ export const getCreatorReadiness = async (req, res, next) => {
         accessSource: access.source,
         meetsRequirements:
           stat.xp >= topic.uploaderRequirements.xpThreshold &&
-          stat.challengeSolvedCount >= topic.uploaderRequirements.challengeSolvedThreshold &&
-          stat.mediumSolvedCount >= topic.uploaderRequirements.mediumSolvedThreshold,
+          stat.quizCompletedCount >= topic.uploaderRequirements.quizCompletedThreshold &&
+          stat.masteredQuizCount >= topic.uploaderRequirements.masteredQuizThreshold,
       });
     }
 
@@ -174,12 +150,11 @@ export const applyForCreator = async (req, res, next) => {
 
 export const getCreatorDashboard = async (req, res, next) => {
   try {
-    const [applications, openLearnApplication, courses, blogs, challenges, discussions] = await Promise.all([
+    const [applications, openLearnApplication, courses, blogs, discussions] = await Promise.all([
       CreatorApplication.find({ applicant: req.user._id }).sort({ createdAt: -1 }),
       OpenLearnApplication.findOne({ applicant: req.user._id }).sort({ createdAt: -1 }),
       Course.find({ instructor: req.user._id }).sort({ updatedAt: -1 }),
       BlogPost.find({ author: req.user._id }).sort({ updatedAt: -1 }),
-      Challenge.find({ createdBy: req.user._id }).sort({ updatedAt: -1 }),
       DiscussionThread.find({}).sort({ createdAt: -1 }).limit(8).populate("author", "name"),
     ]);
 
@@ -203,7 +178,6 @@ export const getCreatorDashboard = async (req, res, next) => {
       openLearnApplication,
       courses,
       blogs,
-      challenges,
       discussions,
       contentPipeline,
       creatorPerformance,
@@ -401,7 +375,6 @@ export const getReviewerQueue = async (_req, res, next) => {
       summary: {
         pendingCount: pendingItems.length,
         courseCount: pendingItems.filter((item) => item.type === "course").length,
-        challengeCount: pendingItems.filter((item) => item.type === "challenge").length,
         blogCount: pendingItems.filter((item) => item.type === "blog").length,
       },
     });

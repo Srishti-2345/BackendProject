@@ -35,7 +35,11 @@ const RegisterPage = () => {
 
     try {
       setError("");
-      const user = await register(formData);
+      const user = await register({
+        ...formData,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+      });
       navigate(destinationByRole[user.role] || "/dashboard");
     } catch (submitError) {
       setError(submitError.response?.data?.message || "Registration failed");

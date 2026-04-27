@@ -18,7 +18,11 @@ const LoginPage = () => {
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
-      const user = await login(formData);
+      setError("");
+      const user = await login({
+        email: formData.email.trim(),
+        password: formData.password,
+      });
       navigate(destinationByRole[user.role] || "/dashboard");
     } catch (submitError) {
       setError(submitError.response?.data?.message || "Login failed");
@@ -32,7 +36,7 @@ const LoginPage = () => {
           <span className="eyebrow">Return to your studio</span>
           <h2>Pick up where your learning momentum left off.</h2>
           <p>
-            Track XP, finish lessons, solve challenges, and step into creator access when
+            Track XP, finish lessons, generate quizzes, and step into creator access when
             your topic mastery is ready.
           </p>
         </div>

@@ -26,17 +26,21 @@ const sanitizeUser = (user) => ({
 const isReviewerEmail = (email = "") =>
   email.toLowerCase().endsWith(`@${REVIEWER_EMAIL_DOMAIN}`);
 
+const normalizeEmail = (email = "") => email.trim().toLowerCase();
+
 export const registerUser = async (req, res, next) => {
   try {
     const { name, email, password, role } = req.body;
+    const normalizedEmail = normalizeEmail(email);
+    const normalizedName = name?.trim();
 
-    if (!name || !email || !password) {
+    if (!normalizedName || !normalizedEmail || !password) {
       const error = new Error("Name, email, and password are required");
       error.statusCode = 400;
       throw error;
     }
 
-    if (role === "reviewer" && !isReviewerEmail(email)) {
+    if (role === "reviewer" && !isReviewerEmail(normalizedEmail)) {
       const error = new Error(
         `Reviewer accounts must use an @${REVIEWER_EMAIL_DOMAIN} email address`
       );
@@ -44,7 +48,7 @@ export const registerUser = async (req, res, next) => {
       throw error;
     }
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       const error = new Error("User already exists with this email");
       error.statusCode = 409;
@@ -52,8 +56,8 @@ export const registerUser = async (req, res, next) => {
     }
 
     const user = await User.create({
-      name,
-      email,
+      name: normalizedName,
+      email: normalizedEmail,
       password,
       role: role || "student",
     });
@@ -71,8 +75,15 @@ export const registerUser = async (req, res, next) => {
 export const loginUser = async (req, res, next) => {
   try {
     const { email, password } = req.body;
+    const normalizedEmail = normalizeEmail(email);
 
-    const user = await User.findOne({ email });
+    if (!normalizedEmail || !password) {
+      const error = new Error("Email and password are required");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user || !(await user.comparePassword(password))) {
       const error = new Error("Invalid email or password");
       error.statusCode = 401;

@@ -1,5 +1,4 @@
 import BlogPost from "../models/BlogPost.js";
-import Challenge from "../models/Challenge.js";
 import Course from "../models/Course.js";
 import CreatorApplication from "../models/CreatorApplication.js";
 import Topic from "../models/Topic.js";
@@ -25,10 +24,9 @@ export const getTopicOverview = async (req, res, next) => {
       throw error;
     }
 
-    const [courses, blogs, challenges] = await Promise.all([
+    const [courses, blogs] = await Promise.all([
       Course.find({ category: topic.name, status: "published" }).populate("instructor", "name"),
       BlogPost.find({ topicSlug: topic.slug, status: "published" }).populate("author", "name"),
-      Challenge.find({ topicSlug: topic.slug }).sort({ difficulty: 1 }),
     ]);
 
     let topicProgress = null;
@@ -50,7 +48,6 @@ export const getTopicOverview = async (req, res, next) => {
       topic,
       courses,
       blogs,
-      challenges,
       topicProgress,
       application,
       contributorAccess: access

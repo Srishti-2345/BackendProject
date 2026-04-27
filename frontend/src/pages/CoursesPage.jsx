@@ -34,7 +34,7 @@ const CoursesPage = () => {
 
   return (
     <section className="section-stack">
-      <div className="section-header">
+      <div className="section-header section-header-card">
         <div>
           <span className="eyebrow">Browse courses</span>
           <h2>Find the right learning path</h2>
@@ -71,7 +71,7 @@ const CoursesPage = () => {
                   <span className="badge">{course.topicSlug}</span>
                   <h3>{course.title}</h3>
                   <p>{course.subtitle}</p>
-                  <div className="meta-row">
+                  <div className="meta-row course-card-meta">
                     <span>by {course.instructor?.name}</span>
                     <strong>Rs. {course.price}</strong>
                   </div>

@@ -11,11 +11,19 @@ export const getTopicStat = (user, topicSlug) => {
       topicSlug,
       xp: 0,
       level: 1,
-      challengeSolvedCount: 0,
-      mediumSolvedCount: 0,
+      quizCompletedCount: 0,
+      masteredQuizCount: 0,
       uploaderUnlocked: false,
     });
     stat = user.topicStats[user.topicStats.length - 1];
+  }
+
+  if (typeof stat.quizCompletedCount !== "number") {
+    stat.quizCompletedCount = Number(stat.challengeSolvedCount || 0);
+  }
+
+  if (typeof stat.masteredQuizCount !== "number") {
+    stat.masteredQuizCount = Number(stat.mediumSolvedCount || 0);
   }
 
   return stat;
@@ -32,8 +40,8 @@ export const syncUploaderUnlock = async (user, topicSlug) => {
 
   if (
     stat.xp >= topic.uploaderRequirements.xpThreshold &&
-    stat.challengeSolvedCount >= topic.uploaderRequirements.challengeSolvedThreshold &&
-    stat.mediumSolvedCount >= topic.uploaderRequirements.mediumSolvedThreshold
+    stat.quizCompletedCount >= topic.uploaderRequirements.quizCompletedThreshold &&
+    stat.masteredQuizCount >= topic.uploaderRequirements.masteredQuizThreshold
   ) {
     stat.uploaderUnlocked = true;
   }
@@ -59,4 +67,3 @@ export const awardXp = async ({ user, topicSlug, xp, sourceType, metadata = {} }
 
   return stat;
 };
-

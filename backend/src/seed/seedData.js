@@ -2,10 +2,10 @@ import dotenv from "dotenv";
 
 import connectDatabase from "../config/db.js";
 import BlogPost from "../models/BlogPost.js";
-import Challenge from "../models/Challenge.js";
 import CreatorApplication from "../models/CreatorApplication.js";
 import Course from "../models/Course.js";
 import DiscussionThread from "../models/DiscussionThread.js";
+import QuizAttempt from "../models/QuizAttempt.js";
 import Topic from "../models/Topic.js";
 import User from "../models/User.js";
 
@@ -51,7 +51,7 @@ const runSeed = async () => {
   if (shouldResetDatabase) {
     await Course.deleteMany();
     await BlogPost.deleteMany();
-    await Challenge.deleteMany();
+    await QuizAttempt.deleteMany();
     await CreatorApplication.deleteMany();
     await DiscussionThread.deleteMany();
     await Topic.deleteMany();
@@ -70,8 +70,8 @@ const runSeed = async () => {
         topicSlug: "react",
         xp: 1200,
         level: 3,
-        challengeSolvedCount: 6,
-        mediumSolvedCount: 2,
+        quizCompletedCount: 6,
+        masteredQuizCount: 2,
         uploaderUnlocked: true,
       },
     ],
@@ -102,8 +102,8 @@ const runSeed = async () => {
       category: "Web Development",
       uploaderRequirements: {
         xpThreshold: 600,
-        challengeSolvedThreshold: 2,
-        mediumSolvedThreshold: 1,
+        quizCompletedThreshold: 2,
+        masteredQuizThreshold: 1,
       },
     }
   );
@@ -118,8 +118,8 @@ const runSeed = async () => {
       category: "Programming",
       uploaderRequirements: {
         xpThreshold: 800,
-        challengeSolvedThreshold: 3,
-        mediumSolvedThreshold: 1,
+        quizCompletedThreshold: 3,
+        masteredQuizThreshold: 1,
       },
     }
   );
@@ -205,6 +205,74 @@ const runSeed = async () => {
   );
 
   await upsertDocument(
+    Course,
+    { slug: "react-state-patterns-crash-course" },
+    {
+      title: "React State Patterns Crash Course",
+      slug: "react-state-patterns-crash-course",
+      subtitle: "Practice local state, derived state, and async UI flows",
+      description:
+        "A short practical course for testing topic pages, course browsing, and lesson rendering with a React-focused curriculum.",
+      category: "React",
+      topicSlug: "react",
+      level: "beginner",
+      thumbnailUrl:
+        "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=1200&q=80",
+      price: 799,
+      learningOutcomes: [
+        "Understand when to keep state local",
+        "Model loading, success, and error states",
+        "Build small reusable UI state patterns",
+      ],
+      requirements: ["Basic React components", "Comfort with JavaScript arrays and objects"],
+      sections: [
+        {
+          title: "State Basics",
+          lessons: [
+            {
+              title: "Thinking in UI States",
+              duration: "09:20",
+              contentType: "article",
+              articleBody:
+                "# Thinking in UI states\n\nEvery screen usually has four core states:\n- idle\n- loading\n- empty\n- success\n\nWhen you model these early, components stay predictable and easier to debug.\n\n## Practice\nSketch one component and list how it should behave in each state.\n",
+              articleUrl: "https://react.dev/learn/state-a-components-memory",
+              resources: [
+                "https://react.dev/learn/state-a-components-memory",
+                "https://react.dev/learn/conditional-rendering",
+              ],
+              isPreview: true,
+            },
+            {
+              title: "Fetch Data Without UI Confusion",
+              duration: "13:10",
+              contentType: "video",
+              videoUrl: "https://www.youtube.com/watch?v=hQAHSlTtcmY",
+              resources: ["https://react.dev/reference/react/useEffect"],
+            },
+          ],
+        },
+        {
+          title: "Small Real Features",
+          lessons: [
+            {
+              title: "Build a Searchable Resource List",
+              duration: "10:45",
+              contentType: "article",
+              articleBody:
+                "# Build a searchable resource list\n\nUse one source array and derive the visible rows from the search query.\n\n## Rules\n- Keep the source data immutable\n- Derive filtered results during render\n- Reset selection when the filter removes the current item\n\n## Result\nYou get a simple but reliable interaction pattern for dashboards and content browsers.\n",
+              articleUrl: "https://react.dev/learn/rendering-lists",
+              resources: ["https://react.dev/learn/rendering-lists"],
+            },
+          ],
+        },
+      ],
+      instructor: instructor._id,
+      status: "published",
+      enrolledCount: 12,
+    }
+  );
+
+  await upsertDocument(
     BlogPost,
     { slug: "how-to-structure-your-first-react-learning-sprint" },
     {
@@ -212,10 +280,48 @@ const runSeed = async () => {
       slug: "how-to-structure-your-first-react-learning-sprint",
       excerpt: "A practical weekly workflow for new React learners.",
       content:
-        "Break your learning into lessons, recap quizzes, and one challenge per day. Track your XP and use community threads for blockers.",
+        "Break your learning into lessons, recap quizzes, and one focused review session per day. Track your XP and use community threads for blockers.",
       topicSlug: "react",
       author: instructor._id,
       status: "published",
+    }
+  );
+
+  await upsertDocument(
+    BlogPost,
+    { slug: "react-debugging-checklist-for-beginners" },
+    {
+      title: "React debugging checklist for beginners",
+      slug: "react-debugging-checklist-for-beginners",
+      excerpt: "A quick checklist for props, state, effects, and rendering issues.",
+      content:
+        "Start with the smallest failing component. Check incoming props, log state transitions, verify effect dependencies, and confirm the UI matches the current data shape. This seed article is here to help test blog listing and detail pages with more realistic content.",
+      topicSlug: "react",
+      author: instructor._id,
+      status: "published",
+      engagement: {
+        views: 18,
+        likes: 4,
+      },
+    }
+  );
+
+  await upsertDocument(
+    BlogPost,
+    { slug: "study-notes-for-data-structures-interviews" },
+    {
+      title: "Study notes for data structures interviews",
+      slug: "study-notes-for-data-structures-interviews",
+      excerpt: "A compact review plan for arrays, hash maps, stacks, and queues.",
+      content:
+        "Focus on one pattern at a time. For arrays, practice indexing and sliding window problems. For maps, track frequency counts and last-seen positions. For stacks and queues, rehearse how order changes problem design. This seeded article gives you another published post to verify filters and navigation.",
+      topicSlug: "data-structures",
+      author: instructor._id,
+      status: "published",
+      engagement: {
+        views: 9,
+        likes: 2,
+      },
     }
   );
 
@@ -229,83 +335,6 @@ const runSeed = async () => {
       statement: "I have already taught React fundamentals and want to contribute.",
       status: "approved",
       reviewerNotes: "Approved in seed data for demo access.",
-    }
-  );
-
-  await upsertDocument(
-    Challenge,
-    { slug: "two-sum-pattern-warmup" },
-    {
-      title: "Two Sum Pattern Warmup",
-      slug: "two-sum-pattern-warmup",
-      topicSlug: "data-structures",
-      difficulty: "easy",
-      prompt: "Return indices of two numbers that add up to the target.",
-      constraints: ["2 <= nums.length <= 10^4", "Exactly one valid answer"],
-      examples: ["nums = [2,7,11,15], target = 9 -> [0,1]"],
-      xpReward: 100,
-      tags: ["arrays", "hashmap"],
-      functionName: "solution",
-      starterCode:
-        "function solution(nums, target) {\n  // return the two indices\n}\n\nmodule.exports = solution;",
-      publicTestCases: [
-        {
-          input: [[2, 7, 11, 15], 9],
-          expectedOutput: [0, 1],
-          explanation: "2 + 7 = 9",
-        },
-        {
-          input: [[3, 2, 4], 6],
-          expectedOutput: [1, 2],
-          explanation: "2 + 4 = 6",
-        },
-      ],
-      hiddenTestCases: [
-        {
-          input: [[3, 3], 6],
-          expectedOutput: [0, 1],
-        },
-      ],
-      editorial: "Use a hash map to store visited values and their indices.",
-    }
-  );
-
-  await upsertDocument(
-    Challenge,
-    { slug: "react-state-synchronization" },
-    {
-      title: "React State Synchronization",
-      slug: "react-state-synchronization",
-      topicSlug: "react",
-      difficulty: "medium",
-      prompt: "Design a component state flow for a nested lesson progress tracker.",
-      constraints: ["Support optimistic updates", "Preserve server truth on refresh"],
-      examples: ["Track module, lesson, and completion percentage updates"],
-      xpReward: 180,
-      tags: ["react", "state-management"],
-      functionName: "solution",
-      starterCode:
-        "function solution(state, update) {\n  // return the next state snapshot\n}\n\nmodule.exports = solution;",
-      publicTestCases: [
-        {
-          input: [
-            { completedLessons: 3, totalLessons: 10 },
-            { delta: 2 },
-          ],
-          expectedOutput: { completedLessons: 5, totalLessons: 10, completionPercentage: 50 },
-          explanation: "Apply the lesson delta and recalculate completion percentage.",
-        },
-      ],
-      hiddenTestCases: [
-        {
-          input: [
-            { completedLessons: 5, totalLessons: 8 },
-            { delta: 1 },
-          ],
-          expectedOutput: { completedLessons: 6, totalLessons: 8, completionPercentage: 75 },
-        },
-      ],
-      editorial: "Normalize state shape and reconcile writes after async responses.",
     }
   );
 

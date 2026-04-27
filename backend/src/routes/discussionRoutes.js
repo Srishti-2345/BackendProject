@@ -5,13 +5,12 @@ import {
   getThreads,
   replyToThread,
 } from "../controllers/discussionController.js";
-import { authorize, protect } from "../middleware/authMiddleware.js";
+import { authorize, optionalAuth, protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.get("/", getThreads);
+router.get("/", optionalAuth, getThreads);
 router.post("/", protect, authorize("student", "instructor"), createThread);
 router.post("/:threadId/replies", protect, authorize("student", "instructor"), replyToThread);
 
 export default router;
-

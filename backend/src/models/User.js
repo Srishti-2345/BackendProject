@@ -84,17 +84,43 @@ const userSchema = new mongoose.Schema(
               type: Number,
               default: 1,
             },
-            challengeSolvedCount: {
+            quizCompletedCount: {
               type: Number,
               default: 0,
             },
-            mediumSolvedCount: {
+            masteredQuizCount: {
               type: Number,
               default: 0,
             },
             uploaderUnlocked: {
               type: Boolean,
               default: false,
+            },
+          },
+          { _id: false }
+        ),
+      ],
+      default: [],
+    },
+    learningNotes: {
+      type: [
+        new mongoose.Schema(
+          {
+            enrollmentId: {
+              type: String,
+              required: true,
+            },
+            lessonTitle: {
+              type: String,
+              required: true,
+            },
+            content: {
+              type: String,
+              default: "",
+            },
+            updatedAt: {
+              type: Date,
+              default: Date.now,
             },
           },
           { _id: false }
