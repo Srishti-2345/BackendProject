@@ -1,8 +1,9 @@
-import pdfParse from "pdf-parse";
+import { extractTextFromDocument } from "./documentTextExtractor.js";
+import { callFreeModelJson, getFreeModelSettings } from "./freeModelClient.js";
 
-const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
-const DEFAULT_OPENAI_QUIZ_MODEL = "gpt-4o-mini";
-const QUESTION_COUNT = 5;
+const DEFAULT_QUESTION_COUNT = 5;
+const MIN_QUESTION_COUNT = 3;
+const MAX_QUESTION_COUNT = 10;
 const MAX_SOURCE_CHARACTERS = 12000;
 const MIN_QUESTION_LENGTH = 25;
 const MIN_EXPLANATION_LENGTH = 20;
@@ -20,26 +21,6 @@ const stripHtml = (html = "") =>
   );
 
 const isYouTubeUrl = (value = "") => /youtube\.com|youtu\.be/i.test(value);
-
-const buildResponseText = (responseData) => {
-  if (typeof responseData.output_text === "string" && responseData.output_text.trim()) {
-    return responseData.output_text;
-  }
-
-  for (const item of responseData.output || []) {
-    if (item.type !== "message") {
-      continue;
-    }
-
-    for (const part of item.content || []) {
-      if (part.type === "output_text" && typeof part.text === "string" && part.text.trim()) {
-        return part.text;
-      }
-    }
-  }
-
-  return "";
-};
 
 const dedupeStrings = (items = []) => {
   const seen = new Set();
@@ -107,9 +88,30 @@ const normalizeQuestion = (question) => ({
 const isWeakOption = (value = "") =>
   /all of the above|none of the above|both a and b|both b and c|not enough information/i.test(value);
 
-const validateGeneratedQuestions = (questions) => {
-  if (!Array.isArray(questions) || questions.length !== QUESTION_COUNT) {
-    throw new Error("Generated quiz did not include exactly five questions");
+const FALLBACK_PROMPT_TEMPLATES = [
+  "What is the main idea emphasized most clearly in this part of the source?",
+  "Which takeaway is best supported by the source material here?",
+  "If a learner followed the source, which focus would fit best?",
+  "Which conclusion follows most directly from the source material?",
+  "Which detail is most consistent with the explanation in the source?",
+];
+
+const shouldUseFallbackQuiz = (error) =>
+  getFreeModelSettings().fallbackEnabled || error?.upstreamStatus === 429;
+
+const normalizeQuestionCount = (questionCount) => {
+  const parsedQuestionCount = Number(questionCount);
+
+  if (!Number.isInteger(parsedQuestionCount)) {
+    return DEFAULT_QUESTION_COUNT;
+  }
+
+  return Math.min(Math.max(parsedQuestionCount, MIN_QUESTION_COUNT), MAX_QUESTION_COUNT);
+};
+
+const validateGeneratedQuestions = (questions, questionCount) => {
+  if (!Array.isArray(questions) || questions.length !== questionCount) {
+    throw new Error(`Generated quiz did not include exactly ${questionCount} questions`);
   }
 
   const promptSet = new Set();
@@ -166,11 +168,12 @@ const validateGeneratedQuestions = (questions) => {
   return questions.map((question) => normalizeQuestion(question));
 };
 
-const buildFallbackQuiz = (sourceText) => {
-  const sentences = buildSourceHighlights(sourceText).filter((item) => item.length > 40).slice(0, 10);
+const buildFallbackQuiz = (sourceText, questionCount) => {
+  const targetQuestionCount = normalizeQuestionCount(questionCount);
+  const sentences = buildSourceHighlights(sourceText).filter((item) => item.length > 40).slice(0, 12);
 
   const pool =
-    sentences.length >= QUESTION_COUNT
+    sentences.length >= targetQuestionCount
       ? sentences
       : [
           ...sentences,
@@ -179,23 +182,33 @@ const buildFallbackQuiz = (sourceText) => {
           "The source connects concepts to application rather than memorization alone.",
           "A strong takeaway is to combine theory with small, repeated practice loops.",
           "Important details are reinforced through examples and structured explanations.",
-        ].slice(0, QUESTION_COUNT + 3);
+        ].slice(0, targetQuestionCount + 3);
 
-  const questions = pool.slice(0, QUESTION_COUNT).map((sentence, index) => {
-    const distractors = pool
-      .filter((item) => item !== sentence)
-      .slice(index % 2, index % 2 + 3);
-    const options = [sentence, ...distractors].slice(0, 4);
+  const questions = pool.slice(0, targetQuestionCount).map((sentence, index) => {
+    const distractors = pool.filter((item) => item !== sentence);
+    const candidateOptions = [
+      sentence,
+      distractors[index % distractors.length],
+      distractors[(index + 1) % distractors.length],
+      distractors[(index + 2) % distractors.length],
+    ].filter(Boolean);
+    const options = dedupeStrings(candidateOptions).slice(0, 4);
 
     while (options.length < 4) {
       options.push("This option is less aligned with the source material than the others.");
     }
 
+    const correctOptionIndex = index % 4;
+    const orderedOptions = [...options];
+    const [correctOption] = orderedOptions.splice(0, 1);
+    orderedOptions.splice(correctOptionIndex, 0, correctOption);
+
     return {
-      prompt: `Which statement best matches the source material in item ${index + 1}?`,
-      options,
-      correctOptionIndex: 0,
-      explanation: "This option matches the source excerpt most directly.",
+      prompt: FALLBACK_PROMPT_TEMPLATES[index % FALLBACK_PROMPT_TEMPLATES.length],
+      options: orderedOptions,
+      correctOptionIndex,
+      explanation:
+        "This option is the closest match to the source excerpt and reflects the idea stated there most directly.",
     };
   });
 
@@ -267,14 +280,17 @@ const buildVideoSourceText = async (videoUrl) => {
   return trimSourceText(parts.join("\n"));
 };
 
-const buildPrompt = ({ topicSlug, sourceType, sourceLabel, sourceText }) =>
+const buildPrompt = ({ topicSlug, questionCount, sourceType, sourceLabel, sourceText }) =>
   [
     "Create a high-quality study quiz from the provided learning material.",
-    "Write exactly five multiple-choice questions.",
+    `Write exactly ${questionCount} multiple-choice questions.`,
     "Each question must have exactly four options.",
     "Only one option can be correct.",
     "Questions must be answerable from the source only.",
     "Test a mix of factual recall, concept understanding, and application of ideas from the source.",
+    `Use at least ${Math.min(4, questionCount)} distinct question styles across the quiz.`,
+    "Mix formats such as main idea, definition, comparison, scenario, sequence, cause and effect, or best-supported conclusion when the source allows it.",
+    "Do not repeat the same question stem pattern across the whole quiz.",
     "Avoid vague wording, trivia, repeated question patterns, and generic filler.",
     "Do not use options like 'All of the above' or 'None of the above'.",
     "Make distractors plausible but clearly incorrect based on the source.",
@@ -287,99 +303,27 @@ const buildPrompt = ({ topicSlug, sourceType, sourceLabel, sourceText }) =>
     `Source material:\n${buildPreparedSourceText(sourceText)}`,
   ].join("\n");
 
-const callOpenAiQuizGenerator = async ({ topicSlug, sourceType, sourceLabel, sourceText }) => {
-  const apiKey = process.env.OPENAI_API_KEY;
+const callFreeQuizGenerator = async ({ topicSlug, questionCount, sourceType, sourceLabel, sourceText }) => {
+  const targetQuestionCount = normalizeQuestionCount(questionCount);
+  const { model, data: parsed } = await callFreeModelJson({
+    systemPrompt:
+      "You generate rigorous multiple-choice quizzes from study material. Every question must be grounded in the source, varied in style, and written clearly enough for a learner to answer without guessing.",
+    userPrompt: `${buildPrompt({ topicSlug, questionCount: targetQuestionCount, sourceType, sourceLabel, sourceText })}
 
-  if (!apiKey) {
-    throw new Error("OPENAI_API_KEY is missing");
-  }
-
-  const model = process.env.OPENAI_QUIZ_MODEL || DEFAULT_OPENAI_QUIZ_MODEL;
-  const response = await fetch(OPENAI_RESPONSES_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      input: [
-        {
-          role: "system",
-          content: [
-            {
-              type: "input_text",
-              text:
-                "You generate rigorous multiple-choice quizzes from study material. Every question must be grounded in the source, varied in style, and written clearly enough for a learner to answer without guessing. Return strict JSON only.",
-            },
-          ],
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "input_text",
-              text: buildPrompt({ topicSlug, sourceType, sourceLabel, sourceText }),
-            },
-          ],
-        },
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "generated_quiz",
-          strict: true,
-          schema: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              questions: {
-                type: "array",
-                minItems: QUESTION_COUNT,
-                maxItems: QUESTION_COUNT,
-                items: {
-                  type: "object",
-                  additionalProperties: false,
-                  properties: {
-                    prompt: { type: "string" },
-                    options: {
-                      type: "array",
-                      minItems: 4,
-                      maxItems: 4,
-                      items: { type: "string" },
-                    },
-                    correctOptionIndex: {
-                      type: "integer",
-                      minimum: 0,
-                      maximum: 3,
-                    },
-                    explanation: { type: "string" },
-                  },
-                  required: ["prompt", "options", "correctOptionIndex", "explanation"],
-                },
-              },
-            },
-            required: ["questions"],
-          },
-        },
-      },
-    }),
+Return JSON with this exact shape:
+{
+  "questions": [
+    {
+      "prompt": "string",
+      "options": ["string", "string", "string", "string"],
+      "correctOptionIndex": 0,
+      "explanation": "string"
+    }
+  ]
+}`,
+    schemaName: "generated_quiz",
   });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenAI quiz generation failed: ${response.status} ${errorText}`);
-  }
-
-  const responseData = await response.json();
-  const outputText = buildResponseText(responseData);
-
-  if (!outputText) {
-    throw new Error("OpenAI quiz generation returned no structured output");
-  }
-
-  const parsed = JSON.parse(outputText);
-  const questions = validateGeneratedQuestions(parsed.questions);
+  const questions = validateGeneratedQuestions(parsed.questions, targetQuestionCount);
 
   return {
     questions,
@@ -390,24 +334,17 @@ const callOpenAiQuizGenerator = async ({ topicSlug, sourceType, sourceLabel, sou
 
 export const buildQuizSource = async ({ sourceType, videoUrl, file }) => {
   if (sourceType === "pdf") {
-    if (!file) {
-      const error = new Error("A PDF file is required");
+    if (!file?.buffer) {
+      const error = new Error("A document file is required");
       error.statusCode = 400;
       throw error;
     }
 
-    const parsedPdf = await pdfParse(file.buffer);
-    const sourceText = trimSourceText(parsedPdf.text || "");
-
-    if (!sourceText) {
-      const error = new Error("Could not extract readable text from the PDF");
-      error.statusCode = 400;
-      throw error;
-    }
+    const extracted = await extractTextFromDocument(file);
 
     return {
-      sourceLabel: file.originalname,
-      sourceText,
+      sourceLabel: extracted.sourceLabel,
+      sourceText: trimSourceText(extracted.sourceText),
     };
   }
 
@@ -425,13 +362,24 @@ export const buildQuizSource = async ({ sourceType, videoUrl, file }) => {
 
 export const generateQuizFromSource = async ({
   topicSlug,
+  questionCount = DEFAULT_QUESTION_COUNT,
   sourceType,
   sourceLabel,
   sourceText,
 }) => {
   try {
-    return await callOpenAiQuizGenerator({ topicSlug, sourceType, sourceLabel, sourceText });
-  } catch (_error) {
-    return buildFallbackQuiz(sourceText);
+    return await callFreeQuizGenerator({
+      topicSlug,
+      questionCount,
+      sourceType,
+      sourceLabel,
+      sourceText,
+    });
+  } catch (error) {
+    if (!shouldUseFallbackQuiz(error)) {
+      throw error;
+    }
+
+    return buildFallbackQuiz(sourceText, questionCount);
   }
 };

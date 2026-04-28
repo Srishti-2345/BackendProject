@@ -2,6 +2,17 @@ import Topic from "../models/Topic.js";
 
 const defaultTopics = [
   {
+    name: "General",
+    slug: "general",
+    description: "Topic-neutral quizzes generated from uploaded study material.",
+    category: "General",
+    uploaderRequirements: {
+      xpThreshold: 400,
+      quizCompletedThreshold: 1,
+      masteredQuizThreshold: 1,
+    },
+  },
+  {
     name: "React",
     slug: "react",
     description: "Component architecture, state management, and frontend workflows.",
@@ -26,12 +37,6 @@ const defaultTopics = [
 ];
 
 export const ensureDefaultTopics = async () => {
-  const existingCount = await Topic.countDocuments({ isActive: true });
-
-  if (existingCount > 0) {
-    return;
-  }
-
   await Promise.all(
     defaultTopics.map((topic) =>
       Topic.findOneAndUpdate(

@@ -62,6 +62,7 @@ const quizAttemptSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+      default: "general",
     },
     sourceType: {
       type: String,

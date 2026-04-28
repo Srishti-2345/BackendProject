@@ -19,12 +19,14 @@ A MERN implementation of your online learning platform idea centered on this pro
 - Course-specific and blog-specific discussion threads
 - Learner dashboard with skill map, XP history, and unlocked topics
 - Creator dashboard with readiness tracking, applications, pipeline status, course creation, and blog drafting
+- Quiz generation from uploaded documents or video links using free-model inference
+- Resume review from PDF or ODT documents using extracted text plus free-model topic matching
 - Seed data for topics, courses, blogs, and challenges
 
 ## Stack
 
 - Frontend: React, React Router, Axios, Vite
-- Backend: Node.js, Express, MongoDB, Mongoose, JWT, bcrypt
+- Backend: Node.js, Express, MongoDB, Mongoose, JWT, bcrypt, OpenRouter-compatible free-model API, ODT parsing
 - Database: MongoDB
 
 ## Project structure
@@ -72,14 +74,15 @@ frontend/
 
 1. Copy `backend/.env.example` to `backend/.env`
 2. Fill in `MONGODB_URI` and `JWT_SECRET`
-3. Install dependencies
+3. Add `OPENROUTER_API_KEY` if you want AI quiz generation and resume review enabled
+4. Install dependencies
 
 ```bash
 cd backend
 npm install
 ```
 
-4. Optional: seed demo data without deleting your existing records
+5. Optional: seed demo data without deleting your existing records
 
 ```bash
 npm run seed
@@ -91,7 +94,7 @@ To wipe the demo collections and recreate them from scratch, run:
 npm run seed:reset
 ```
 
-5. Start the API
+6. Start the API
 
 ```bash
 npm run dev

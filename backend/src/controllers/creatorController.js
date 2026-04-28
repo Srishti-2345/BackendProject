@@ -3,9 +3,9 @@ import Course from "../models/Course.js";
 import CreatorApplication from "../models/CreatorApplication.js";
 import DiscussionThread from "../models/DiscussionThread.js";
 import OpenLearnApplication from "../models/OpenLearnApplication.js";
-import pdfParse from "pdf-parse";
 import Topic from "../models/Topic.js";
 import { getTopicContributionAccess, hasOpenLearnEmail } from "../utils/contributorAccess.js";
+import { extractTextFromDocument, getDocumentKindLabel } from "../utils/documentTextExtractor.js";
 import { reviewOpenLearnApplication } from "../utils/openLearnReview.js";
 import { awardXp, getTopicStat, syncUploaderUnlock } from "../utils/progression.js";
 
@@ -209,19 +209,13 @@ export const applyForOpenLearnContributor = async (req, res, next) => {
     const resumeFile = req.file;
 
     if (!fullName || !resumeFile) {
-      const error = new Error("Full name and a resume PDF are required");
+      const error = new Error("Full name and a resume document are required");
       error.statusCode = 400;
       throw error;
     }
 
-    const parsedResume = await pdfParse(resumeFile.buffer);
-    const resumeText = parsedResume.text?.trim() || "";
-
-    if (!resumeText) {
-      const error = new Error("Could not extract readable text from the uploaded PDF");
-      error.statusCode = 400;
-      throw error;
-    }
+    const extractedResume = await extractTextFromDocument(resumeFile);
+    const resumeText = extractedResume.sourceText;
 
     const topics = await Topic.find({ isActive: true }).sort({ name: 1 });
     const review = await reviewOpenLearnApplication({
@@ -301,6 +295,7 @@ export const applyForOpenLearnContributor = async (req, res, next) => {
       success: true,
       application,
       contributorAccess: req.user.contributorAccess,
+      extractedFrom: getDocumentKindLabel(resumeFile),
     });
   } catch (error) {
     next(error);

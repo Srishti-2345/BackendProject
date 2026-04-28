@@ -2,11 +2,19 @@ import { useEffect, useMemo, useState } from "react";
 
 import api from "../api/client.js";
 
+const QUESTION_COUNT_OPTIONS = [3, 5, 7, 10];
+
+const formatTopicLabel = (topicSlug = "") =>
+  String(topicSlug || "general")
+    .split("-")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
 const QuizStudioPage = () => {
-  const [topics, setTopics] = useState([]);
   const [history, setHistory] = useState([]);
   const [sourceType, setSourceType] = useState("pdf");
-  const [topicSlug, setTopicSlug] = useState("react");
+  const [requestedQuestionCount, setRequestedQuestionCount] = useState(5);
   const [pdfFile, setPdfFile] = useState(null);
   const [videoUrl, setVideoUrl] = useState("");
   const [activeAttempt, setActiveAttempt] = useState(null);
@@ -17,12 +25,7 @@ const QuizStudioPage = () => {
   const [message, setMessage] = useState(null);
 
   const loadInitialData = async () => {
-    const [topicsResponse, historyResponse] = await Promise.all([
-      api.get("/topics"),
-      api.get("/quizzes/history"),
-    ]);
-
-    setTopics(topicsResponse.data.topics);
+    const historyResponse = await api.get("/quizzes/history");
     setHistory(historyResponse.data.attempts);
   };
 
@@ -35,15 +38,7 @@ const QuizStudioPage = () => {
     });
   }, []);
 
-  useEffect(() => {
-    if (!topics.length || topicSlug) {
-      return;
-    }
-
-    setTopicSlug(topics[0].slug);
-  }, [topics, topicSlug]);
-
-  const questionCount = activeAttempt?.questions?.length || 0;
+  const activeQuestionCount = activeAttempt?.questions?.length || 0;
   const answeredCount = useMemo(
     () => answers.filter((answer) => Number.isInteger(answer) && answer >= 0).length,
     [answers]
@@ -59,11 +54,11 @@ const QuizStudioPage = () => {
 
       const formData = new FormData();
       formData.append("sourceType", sourceType);
-      formData.append("topicSlug", topicSlug);
+      formData.append("questionCount", String(requestedQuestionCount));
 
       if (sourceType === "pdf") {
         if (!pdfFile) {
-          setMessage({ tone: "error-note", text: "Please choose a PDF before generating a quiz." });
+          setMessage({ tone: "error-note", text: "Please choose a PDF or ODT document before generating a quiz." });
           return;
         }
 
@@ -124,7 +119,7 @@ const QuizStudioPage = () => {
       <div className="section-header">
         <div>
           <span className="eyebrow">Quiz Studio</span>
-          <h2>Generate a quiz from a PDF or video link</h2>
+          <h2>Generate a quiz from a document or video link</h2>
         </div>
       </div>
 
@@ -136,18 +131,21 @@ const QuizStudioPage = () => {
             <div className="creator-panel-head">
               <div>
                 <h3>New quiz</h3>
-                <p>Pick a topic, add a source, and let the app build a fresh quiz.</p>
+                <p>Add a source, choose the quiz length, and let the app build a fresh quiz.</p>
               </div>
             </div>
             <div className="split-row">
               <select value={sourceType} onChange={(event) => setSourceType(event.target.value)}>
-                <option value="pdf">PDF upload</option>
+                <option value="pdf">Document upload</option>
                 <option value="video_url">Video URL</option>
               </select>
-              <select value={topicSlug} onChange={(event) => setTopicSlug(event.target.value)}>
-                {topics.map((topic) => (
-                  <option key={topic._id} value={topic.slug}>
-                    {topic.name}
+              <select
+                value={requestedQuestionCount}
+                onChange={(event) => setRequestedQuestionCount(Number(event.target.value))}
+              >
+                {QUESTION_COUNT_OPTIONS.map((count) => (
+                  <option key={count} value={count}>
+                    {count} questions
                   </option>
                 ))}
               </select>
@@ -155,11 +153,11 @@ const QuizStudioPage = () => {
 
             {sourceType === "pdf" ? (
               <label className="creator-upload-field">
-                <span>Study PDF</span>
-                <small>{pdfFile ? pdfFile.name : "Upload a PDF with readable text"}</small>
+                <span>Study document</span>
+                <small>{pdfFile ? pdfFile.name : "Upload a PDF or ODT file with readable text"}</small>
                 <input
                   type="file"
-                  accept="application/pdf,.pdf"
+                  accept="application/pdf,.pdf,application/vnd.oasis.opendocument.text,.odt"
                   onChange={(event) => setPdfFile(event.target.files?.[0] || null)}
                 />
               </label>
@@ -201,8 +199,8 @@ const QuizStudioPage = () => {
                     }}
                   >
                     <div className="meta-row">
-                      <span className="badge">{attempt.sourceType === "pdf" ? "PDF" : "Video"}</span>
-                      <span>{attempt.topicSlug}</span>
+                      <span className="badge">{attempt.sourceType === "pdf" ? "Document" : "Video"}</span>
+                      <span>{formatTopicLabel(attempt.topicSlug)}</span>
                     </div>
                     <strong>{attempt.sourceLabel}</strong>
                     <p>
@@ -224,8 +222,8 @@ const QuizStudioPage = () => {
             <>
               <div className="panel quiz-summary-panel">
                 <div className="meta-row">
-                  <span className="badge">{activeAttempt.topicSlug}</span>
-                  <span>{answeredCount}/{questionCount} answered</span>
+                  <span className="badge">{formatTopicLabel(activeAttempt.topicSlug)}</span>
+                  <span>{answeredCount}/{activeQuestionCount} answered</span>
                 </div>
                 <h3>{activeAttempt.sourceLabel}</h3>
                 <p>{activeAttempt.sourceExcerpt || "Quiz source ready."}</p>
@@ -233,7 +231,7 @@ const QuizStudioPage = () => {
                   <button
                     className="primary-button"
                     type="button"
-                    disabled={submitting || answeredCount !== questionCount}
+                    disabled={submitting || answeredCount !== activeQuestionCount}
                     onClick={handleSubmitQuiz}
                   >
                     {submitting ? "Submitting..." : "Submit quiz"}

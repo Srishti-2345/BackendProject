@@ -256,7 +256,7 @@ const InstructorDashboardPage = () => {
       if (!resumeFile) {
         setOpenLearnMessage({
           tone: "error-note",
-          text: "Please upload a PDF resume before submitting.",
+          text: "Please upload a PDF or ODT resume before submitting.",
         });
         return;
       }
@@ -264,7 +264,7 @@ const InstructorDashboardPage = () => {
       setOpenLearnSubmitting(true);
       setOpenLearnMessage({
         tone: "state-card compact",
-        text: "Processing your PDF resume and matching it to topics with OpenAI. This can take a few seconds.",
+        text: "Processing your resume document and matching it to topics with a free AI model. This can take a few seconds.",
       });
 
       const formData = new FormData();
@@ -502,11 +502,11 @@ const InstructorDashboardPage = () => {
               }
             />
             <label className="creator-upload-field">
-              <span>Resume PDF</span>
-              <small>{resumeFile ? resumeFile.name : "Upload a PDF resume"}</small>
+              <span>Resume document</span>
+              <small>{resumeFile ? resumeFile.name : "Upload a PDF or ODT resume"}</small>
               <input
                 type="file"
-                accept="application/pdf,.pdf"
+                accept="application/pdf,.pdf,application/vnd.oasis.opendocument.text,.odt"
                 onChange={(event) => setResumeFile(event.target.files?.[0] || null)}
               />
             </label>

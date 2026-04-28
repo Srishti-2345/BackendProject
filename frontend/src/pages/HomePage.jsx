@@ -30,7 +30,7 @@ const HomePage = () => (
           </div>
           <div className="hero-mini-stat">
             <strong>Practice from real material</strong>
-            <span>Generate quizzes from PDFs or videos and earn topic XP as you improve.</span>
+            <span>Generate quizzes from documents or videos and earn topic XP as you improve.</span>
           </div>
           <div className="hero-mini-stat">
             <strong>Earn creator access</strong>
@@ -58,7 +58,7 @@ const HomePage = () => (
       </div>
       <div className="panel numbered-panel">
         <h3>2. Prove competence</h3>
-        <p>Generate quizzes from PDFs or video links, build streaks, and earn verified topic XP.</p>
+        <p>Generate quizzes from documents or video links, build streaks, and earn verified topic XP.</p>
       </div>
       <div className="panel numbered-panel">
         <h3>3. Contribute back</h3>

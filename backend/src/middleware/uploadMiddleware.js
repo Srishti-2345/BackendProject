@@ -2,12 +2,14 @@ import multer from "multer";
 
 const storage = multer.memoryStorage();
 
-const pdfFileFilter = (_req, file, cb) => {
-  const isPdf =
-    file.mimetype === "application/pdf" || file.originalname.toLowerCase().endsWith(".pdf");
+const documentFileFilter = (_req, file, cb) => {
+  const lowerName = file.originalname.toLowerCase();
+  const isPdf = file.mimetype === "application/pdf" || lowerName.endsWith(".pdf");
+  const isOdt =
+    file.mimetype === "application/vnd.oasis.opendocument.text" || lowerName.endsWith(".odt");
 
-  if (!isPdf) {
-    cb(new Error("Only PDF files are allowed"));
+  if (!isPdf && !isOdt) {
+    cb(new Error("Only PDF or ODT files are allowed"));
     return;
   }
 
@@ -16,7 +18,7 @@ const pdfFileFilter = (_req, file, cb) => {
 
 export const pdfUpload = multer({
   storage,
-  fileFilter: pdfFileFilter,
+  fileFilter: documentFileFilter,
   limits: {
     fileSize: 5 * 1024 * 1024,
   },

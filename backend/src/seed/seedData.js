@@ -273,6 +273,265 @@ const runSeed = async () => {
   );
 
   await upsertDocument(
+    Course,
+    { slug: "react-router-and-dashboard-patterns" },
+    {
+      title: "React Router and Dashboard Patterns",
+      slug: "react-router-and-dashboard-patterns",
+      subtitle: "Build cleaner navigation, nested layouts, and work-focused app flows",
+      description:
+        "Learn how to structure dashboards with React Router, persistent shells, protected routes, and efficient view transitions.",
+      category: "Web Development",
+      topicSlug: "react",
+      level: "intermediate",
+      thumbnailUrl:
+        "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80",
+      price: 1299,
+      learningOutcomes: [
+        "Design dashboard-friendly route structures",
+        "Handle protected and role-based navigation flows",
+        "Create reusable page shells and nested layouts",
+        "Improve UX with clearer information hierarchy",
+      ],
+      requirements: ["Comfort with React components", "Basic knowledge of React Router"],
+      sections: [
+        {
+          title: "Routing Foundations",
+          lessons: [
+            {
+              title: "Designing Routes for Real Apps",
+              duration: "10:20",
+              contentType: "article",
+              articleBody:
+                "# Design routes around workflows\n\nA route tree should reflect how users move through the product.\n\n## Start here\n- public catalog pages\n- authenticated work areas\n- detail pages with stable URLs\n\n## Rule of thumb\nIf a user needs to bookmark it, give it a route.\n",
+              articleUrl: "https://reactrouter.com/en/main/start/overview",
+              resources: ["https://reactrouter.com/en/main/start/overview"],
+              isPreview: true,
+            },
+            {
+              title: "Protected Routes Without Tangled Logic",
+              duration: "12:35",
+              contentType: "video",
+              videoUrl: "https://www.youtube.com/watch?v=Law7wfdg_ls",
+              resources: ["https://reactrouter.com/en/main/route/route"],
+            },
+          ],
+        },
+        {
+          title: "Dashboard UX",
+          lessons: [
+            {
+              title: "Persistent Shells and Nested Layouts",
+              duration: "15:10",
+              contentType: "article",
+              articleBody:
+                "# Persistent shells keep users oriented\n\nA dashboard should not feel like a stack of disconnected pages.\n\n## Use nested layouts for\n- shared navigation\n- stable sidebars\n- consistent page spacing\n\n## Result\nUsers can move faster because the app keeps its shape.\n",
+              articleUrl: "https://reactrouter.com/en/main/components/outlet",
+              resources: ["https://reactrouter.com/en/main/components/outlet"],
+            },
+          ],
+        },
+      ],
+      instructor: instructor._id,
+      status: "published",
+      enrolledCount: 21,
+    }
+  );
+
+  await upsertDocument(
+    Course,
+    { slug: "frontend-debugging-workflows-with-react" },
+    {
+      title: "Frontend Debugging Workflows with React",
+      slug: "frontend-debugging-workflows-with-react",
+      subtitle: "Trace rendering bugs, state mistakes, and effect issues with confidence",
+      description:
+        "A practical debugging course for learners who can build components but still get stuck on state, rendering, and side effects.",
+      category: "Web Development",
+      topicSlug: "react",
+      level: "intermediate",
+      thumbnailUrl:
+        "https://images.unsplash.com/photo-1517180102446-f3ece451e9d8?auto=format&fit=crop&w=1200&q=80",
+      price: 999,
+      learningOutcomes: [
+        "Find UI bugs by isolating component state",
+        "Reason about effect dependencies more clearly",
+        "Use logs and small test cases to narrow failures",
+        "Build a repeatable debugging checklist",
+      ],
+      requirements: ["Basic React experience", "Familiarity with props and state"],
+      sections: [
+        {
+          title: "Debugging Basics",
+          lessons: [
+            {
+              title: "Shrink the Problem First",
+              duration: "08:50",
+              contentType: "article",
+              articleBody:
+                "# Shrink the problem first\n\nWhen a screen feels broken, start by reducing the surface area.\n\n## Ask\n- Which component owns the bad state?\n- What is the smallest failing interaction?\n- Can I reproduce it with hardcoded data?\n",
+              articleUrl: "https://react.dev/learn/react-developer-tools",
+              resources: ["https://react.dev/learn/react-developer-tools"],
+              isPreview: true,
+            },
+            {
+              title: "Reading Effects Without Guessing",
+              duration: "11:40",
+              contentType: "video",
+              videoUrl: "https://www.youtube.com/watch?v=0ZJgIjIuY7U",
+              resources: ["https://react.dev/reference/react/useEffect"],
+            },
+          ],
+        },
+        {
+          title: "A Reliable Process",
+          lessons: [
+            {
+              title: "Create a Debugging Checklist",
+              duration: "13:25",
+              contentType: "article",
+              articleBody:
+                "# A debugging checklist you can reuse\n\n## Check in order\n- props shape\n- initial state\n- event handlers\n- async request timing\n- render conditions\n\nThis reduces panic and helps you debug with evidence instead of intuition.\n",
+              resources: ["https://react.dev/learn/conditional-rendering"],
+            },
+          ],
+        },
+      ],
+      instructor: instructor._id,
+      status: "published",
+      enrolledCount: 17,
+    }
+  );
+
+  await upsertDocument(
+    Course,
+    { slug: "data-structures-patterns-for-coding-interviews" },
+    {
+      title: "Data Structures Patterns for Coding Interviews",
+      slug: "data-structures-patterns-for-coding-interviews",
+      subtitle: "Master arrays, maps, stacks, and pattern recognition under pressure",
+      description:
+        "Build confidence with the most common interview data structure patterns through guided explanations and short focused practice.",
+      category: "Programming",
+      topicSlug: "data-structures",
+      level: "intermediate",
+      thumbnailUrl:
+        "https://images.unsplash.com/photo-1516116216624-53e697fedbea?auto=format&fit=crop&w=1200&q=80",
+      price: 1499,
+      learningOutcomes: [
+        "Recognize common interview problem patterns",
+        "Use hash maps and frequency tables effectively",
+        "Apply stack and queue logic with confidence",
+        "Choose the right structure faster during practice",
+      ],
+      requirements: ["Comfort with basic JavaScript", "Interest in interview preparation"],
+      sections: [
+        {
+          title: "Core Patterns",
+          lessons: [
+            {
+              title: "Frequency Counting with Hash Maps",
+              duration: "14:15",
+              contentType: "article",
+              articleBody:
+                "# Frequency counting\n\nHash maps become powerful when you use them to summarize input quickly.\n\n## Common use cases\n- duplicates\n- anagrams\n- pair counting\n- last seen index\n\n## Goal\nReduce repeated scanning and make comparisons constant-time where possible.\n",
+              articleUrl: "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+              resources: ["https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map"],
+              isPreview: true,
+            },
+            {
+              title: "Stack Problems Without Memorizing Tricks",
+              duration: "12:45",
+              contentType: "video",
+              videoUrl: "https://www.youtube.com/watch?v=wjI1WNcIntg",
+              resources: ["https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/push"],
+            },
+          ],
+        },
+        {
+          title: "Interview Practice",
+          lessons: [
+            {
+              title: "How to Explain Tradeoffs Clearly",
+              duration: "09:30",
+              contentType: "article",
+              articleBody:
+                "# Explain your choice, not just your answer\n\nIn interviews, clarity matters as much as correctness.\n\n## Cover these points\n- chosen structure\n- time complexity\n- space cost\n- why alternatives were weaker\n",
+              resources: ["https://bigocheatsheet.com/"],
+            },
+          ],
+        },
+      ],
+      instructor: instructor._id,
+      status: "published",
+      enrolledCount: 28,
+    }
+  );
+
+  await upsertDocument(
+    Course,
+    { slug: "problem-solving-with-arrays-and-two-pointers" },
+    {
+      title: "Problem Solving with Arrays and Two Pointers",
+      slug: "problem-solving-with-arrays-and-two-pointers",
+      subtitle: "Build speed on the most common array interview patterns",
+      description:
+        "A focused course on arrays, sliding windows, and two-pointer thinking for learners building algorithm fluency.",
+      category: "Programming",
+      topicSlug: "data-structures",
+      level: "beginner",
+      thumbnailUrl:
+        "https://images.unsplash.com/photo-1526379095098-d400fd0bf935?auto=format&fit=crop&w=1200&q=80",
+      price: 899,
+      learningOutcomes: [
+        "Use two pointers to reduce brute-force solutions",
+        "Recognize sliding window opportunities",
+        "Track subarrays and ranges more confidently",
+      ],
+      requirements: ["Basic loops and conditionals", "Comfort reading arrays"],
+      sections: [
+        {
+          title: "Array Thinking",
+          lessons: [
+            {
+              title: "When Arrays Become Pattern Problems",
+              duration: "07:55",
+              contentType: "article",
+              articleBody:
+                "# Arrays are often about movement\n\nMany array questions become easier when you track positions instead of values alone.\n\n## Watch for\n- left and right boundaries\n- sorted order\n- running totals\n- window size\n",
+              isPreview: true,
+              resources: ["https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array"],
+            },
+            {
+              title: "Sliding Window in Practice",
+              duration: "10:30",
+              contentType: "video",
+              videoUrl: "https://www.youtube.com/watch?v=MK-NZ4hN7rs",
+              resources: ["https://leetcode.com/tag/sliding-window/"],
+            },
+          ],
+        },
+        {
+          title: "Patterns You Reuse",
+          lessons: [
+            {
+              title: "Two Pointers for Pair and Range Problems",
+              duration: "12:10",
+              contentType: "article",
+              articleBody:
+                "# Two pointers\n\nThis pattern works best when the array is sorted or when you are expanding and shrinking a range.\n\n## Benefits\n- fewer nested loops\n- easier complexity analysis\n- cleaner reasoning about invariants\n",
+              resources: ["https://leetcode.com/tag/two-pointers/"],
+            },
+          ],
+        },
+      ],
+      instructor: instructor._id,
+      status: "published",
+      enrolledCount: 14,
+    }
+  );
+
+  await upsertDocument(
     BlogPost,
     { slug: "how-to-structure-your-first-react-learning-sprint" },
     {

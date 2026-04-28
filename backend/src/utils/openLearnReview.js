@@ -1,5 +1,5 @@
-const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
-const DEFAULT_OPENAI_RESUME_MODEL = "gpt-4o-mini";
+import { callFreeModelJson, getFreeModelSettings } from "./freeModelClient.js";
+
 const MAX_RECOMMENDED_TOPICS = 3;
 const MAX_RESUME_CHARACTERS = 16000;
 
@@ -86,26 +86,6 @@ const buildHeuristicReview = ({ topics, resumeText, experienceSummary = "" }) =>
 const trimResumeText = (resumeText = "") =>
   resumeText.trim().slice(0, MAX_RESUME_CHARACTERS);
 
-const buildResponseText = (responseData) => {
-  if (typeof responseData.output_text === "string" && responseData.output_text.trim()) {
-    return responseData.output_text;
-  }
-
-  for (const item of responseData.output || []) {
-    if (item.type !== "message") {
-      continue;
-    }
-
-    for (const part of item.content || []) {
-      if (part.type === "output_text" && typeof part.text === "string" && part.text.trim()) {
-        return part.text;
-      }
-    }
-  }
-
-  return "";
-};
-
 const buildPrompt = ({ topics, resumeText, experienceSummary }) => {
   const topicCatalog = topics.map((topic) => ({
     slug: topic.slug,
@@ -128,96 +108,22 @@ const buildPrompt = ({ topics, resumeText, experienceSummary }) => {
   ].join("\n");
 };
 
-const callOpenAiResumeReview = async ({ topics, resumeText, experienceSummary = "" }) => {
-  const apiKey = process.env.OPENAI_API_KEY;
-
-  if (!apiKey) {
-    throw new Error("OPENAI_API_KEY is missing");
-  }
-
+const callFreeResumeReview = async ({ topics, resumeText, experienceSummary = "" }) => {
   const allowedTopicSlugs = topics.map((topic) => topic.slug);
-  const model = process.env.OPENAI_RESUME_MODEL || DEFAULT_OPENAI_RESUME_MODEL;
-  const response = await fetch(OPENAI_RESPONSES_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      input: [
-        {
-          role: "system",
-          content: [
-            {
-              type: "input_text",
-              text:
-                "You review resumes and decide which learning-platform topics should be unlocked for contribution. Be conservative, factual, and only use the provided topics.",
-            },
-          ],
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "input_text",
-              text: buildPrompt({ topics, resumeText, experienceSummary }),
-            },
-          ],
-        },
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "resume_topic_review",
-          strict: true,
-          schema: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              status: {
-                type: "string",
-                enum: ["approved", "rejected"],
-              },
-              recommendedTopics: {
-                type: "array",
-                maxItems: MAX_RECOMMENDED_TOPICS,
-                items: {
-                  type: "string",
-                  enum: allowedTopicSlugs,
-                },
-              },
-              analysisSummary: {
-                type: "string",
-              },
-              reviewHighlights: {
-                type: "array",
-                maxItems: 5,
-                items: {
-                  type: "string",
-                },
-              },
-            },
-            required: ["status", "recommendedTopics", "analysisSummary", "reviewHighlights"],
-          },
-        },
-      },
-    }),
+  const { model, data: review } = await callFreeModelJson({
+    systemPrompt:
+      "You review resumes and decide which learning-platform topics should be unlocked for contribution. Be conservative, factual, and only use the provided topics.",
+    userPrompt: `${buildPrompt({ topics, resumeText, experienceSummary })}
+
+Return JSON with this exact shape:
+{
+  "status": "approved",
+  "recommendedTopics": ["topic-slug"],
+  "analysisSummary": "string",
+  "reviewHighlights": ["string"]
+}`,
+    schemaName: "resume_topic_review",
   });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenAI review failed: ${response.status} ${errorText}`);
-  }
-
-  const responseData = await response.json();
-  const outputText = buildResponseText(responseData);
-
-  if (!outputText) {
-    throw new Error("OpenAI review returned no structured output");
-  }
-
-  const review = JSON.parse(outputText);
   const normalizedTopics = Array.isArray(review.recommendedTopics)
     ? review.recommendedTopics.filter((slug) => allowedTopicSlugs.includes(slug))
     : [];
@@ -244,8 +150,12 @@ export const reviewOpenLearnApplication = async ({ topics, resumeText, experienc
   }
 
   try {
-    return await callOpenAiResumeReview({ topics, resumeText, experienceSummary });
+    return await callFreeResumeReview({ topics, resumeText, experienceSummary });
   } catch (error) {
+    if (!getFreeModelSettings().fallbackEnabled) {
+      throw error;
+    }
+
     const fallback = buildHeuristicReview({ topics, resumeText, experienceSummary });
 
     return {

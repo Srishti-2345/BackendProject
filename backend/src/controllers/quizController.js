@@ -21,16 +21,28 @@ const sanitizeAttempt = (attempt) => ({
 
 export const generateQuiz = async (req, res, next) => {
   try {
-    const { sourceType, topicSlug, videoUrl = "" } = req.body;
+    const {
+      sourceType,
+      topicSlug = "general",
+      questionCount: rawQuestionCount = 5,
+      videoUrl = "",
+    } = req.body;
 
-    if (!sourceType || !topicSlug) {
-      const error = new Error("Source type and topic are required");
+    if (!sourceType) {
+      const error = new Error("Source type is required");
       error.statusCode = 400;
       throw error;
     }
 
     if (!["pdf", "video_url"].includes(sourceType)) {
       const error = new Error("Unsupported source type");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const questionCount = Number(rawQuestionCount);
+    if (!Number.isInteger(questionCount) || questionCount < 3 || questionCount > 10) {
+      const error = new Error("Question count must be a whole number between 3 and 10");
       error.statusCode = 400;
       throw error;
     }
@@ -43,6 +55,7 @@ export const generateQuiz = async (req, res, next) => {
 
     const generatedQuiz = await generateQuizFromSource({
       topicSlug,
+      questionCount,
       sourceType,
       sourceLabel,
       sourceText,
