@@ -27,17 +27,6 @@ const DashboardPage = () => {
     loadEnrollments();
   }, []);
 
-  const toggleLesson = async (enrollmentId, lessonTitle, completed) => {
-    const { data } = await api.patch(`/enrollments/${enrollmentId}/progress`, {
-      lessonTitle,
-      completed: !completed,
-    });
-
-    setEnrollments((current) =>
-      current.map((item) => (item._id === enrollmentId ? data.enrollment : item))
-    );
-  };
-
   if (loading) {
     return <div className="state-card">Loading your dashboard...</div>;
   }
@@ -94,56 +83,92 @@ const DashboardPage = () => {
           <div className="panel">
             <h3>Recent XP activity</h3>
             <div className="list-stack">
-              {summary.xpEvents.map((event) => (
-                <div key={event._id} className="list-item">
-                  <div>
-                    <strong>{event.sourceType.replaceAll("_", " ")}</strong>
-                    <p>{event.topicSlug}</p>
+              {summary.xpEvents.slice(0, 5).length ? (
+                summary.xpEvents.slice(0, 5).map((event) => (
+                  <div key={event._id} className="list-item">
+                    <div>
+                      <strong>{event.sourceType.replaceAll("_", " ")}</strong>
+                      <p>{event.topicSlug}</p>
+                    </div>
+                    <span>+{event.xp} XP</span>
                   </div>
-                  <span>+{event.xp} XP</span>
-                </div>
-              ))}
+                ))
+              ) : (
+                <div className="state-card compact">No XP activity yet.</div>
+              )}
             </div>
           </div>
         </div>
       ) : null}
 
-      <div className="card-grid">
-        {enrollments.length ? (
-          enrollments.map((enrollment) => (
-            <article className="panel enrollment-card" key={enrollment._id}>
-              <h3>{enrollment.course?.title}</h3>
-              <div className="enrollment-card-summary">
-                <p>Instructor: {enrollment.course?.instructor?.name}</p>
-                <p>Progress: {enrollment.completionPercentage}%</p>
-              </div>
-              <div className="button-row enrollment-card-actions">
-                <Link className="primary-button" to={`/learn/${enrollment._id}`}>
-                  Open Course
-                </Link>
-              </div>
-              <ul className="progress-list">
-                {enrollment.progress.map((item) => (
-                  <li key={item.lessonTitle}>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={item.completed}
-                        onChange={() =>
-                          toggleLesson(enrollment._id, item.lessonTitle, item.completed)
-                        }
+      <section className="dashboard-course-section">
+        <div className="section-header">
+          <div>
+            <span className="eyebrow">Enrolled courses</span>
+            <h2>Continue learning</h2>
+          </div>
+          <Link className="ghost-button" to="/courses">
+            Browse courses
+          </Link>
+        </div>
+
+        <div className="dashboard-course-grid">
+          {enrollments.length ? (
+            enrollments.map((enrollment) => {
+              const totalLessons = enrollment.progress.length;
+              const completedLessons = enrollment.progress.filter((item) => item.completed).length;
+              const nextLesson = enrollment.progress.find((item) => !item.completed);
+
+              return (
+                <article className="panel enrollment-card" key={enrollment._id}>
+                  <div className="enrollment-card-head">
+                    {enrollment.course?.thumbnailUrl ? (
+                      <img
+                        src={enrollment.course.thumbnailUrl}
+                        alt={enrollment.course?.title}
+                        className="enrollment-thumb"
                       />
-                      <span>{item.lessonTitle}</span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            </article>
-          ))
-        ) : (
-          <div className="state-card">You have not enrolled in any courses yet.</div>
-        )}
-      </div>
+                    ) : (
+                      <div className="enrollment-thumb enrollment-thumb-empty" />
+                    )}
+                    <div>
+                      <div className="meta-row">
+                        <span className="badge">{enrollment.course?.topicSlug || "course"}</span>
+                        <span>{enrollment.completionPercentage}%</span>
+                      </div>
+                      <h3>{enrollment.course?.title}</h3>
+                      <p>Instructor: {enrollment.course?.instructor?.name || "LearnSphere"}</p>
+                    </div>
+                  </div>
+
+                  <div className="enrollment-progress-track" aria-hidden="true">
+                    <span style={{ width: `${enrollment.completionPercentage}%` }} />
+                  </div>
+
+                  <div className="enrollment-card-summary">
+                    <div>
+                      <strong>{completedLessons}/{totalLessons}</strong>
+                      <span>lessons complete</span>
+                    </div>
+                    <div>
+                      <strong>{nextLesson?.lessonTitle || "Course complete"}</strong>
+                      <span>{nextLesson ? "Next up" : "Ready for review"}</span>
+                    </div>
+                  </div>
+
+                  <div className="button-row enrollment-card-actions">
+                    <Link className="primary-button" to={`/learn/${enrollment._id}`}>
+                      Continue Course
+                    </Link>
+                  </div>
+                </article>
+              );
+            })
+          ) : (
+            <div className="state-card">You have not enrolled in any courses yet.</div>
+          )}
+        </div>
+      </section>
     </section>
   );
 };

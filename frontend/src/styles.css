@@ -954,12 +954,77 @@ p {
 
 .enrollment-card {
   display: grid;
-  gap: 1rem;
+  gap: 1.05rem;
+  padding: 1.05rem;
+  overflow: hidden;
+}
+
+.enrollment-card-head {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.enrollment-thumb {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 0.7rem;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.enrollment-thumb-empty {
+  border: 1px solid rgba(48, 43, 45, 0.08);
+  background:
+    linear-gradient(135deg, rgba(63, 143, 131, 0.16), rgba(191, 104, 72, 0.14)),
+    rgba(255, 255, 255, 0.58);
+}
+
+.enrollment-card-head h3 {
+  margin: 0.55rem 0 0.25rem;
+}
+
+.enrollment-card-head p,
+.enrollment-card-summary span {
+  color: var(--muted);
+}
+
+.enrollment-progress-track {
+  height: 0.55rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(48, 43, 45, 0.08);
+}
+
+.enrollment-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--clay), #3f8f83);
 }
 
 .enrollment-card-summary {
   display: grid;
-  gap: 0.3rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.enrollment-card-summary div {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid rgba(48, 43, 45, 0.08);
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.enrollment-card-summary strong {
+  overflow: hidden;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .enrollment-card-actions {
@@ -1012,6 +1077,17 @@ p {
 
 .dashboard-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dashboard-course-section {
+  display: grid;
+  gap: 1.15rem;
+}
+
+.dashboard-course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.15rem;
 }
 
 .creator-shell {
@@ -1540,7 +1616,10 @@ p {
 @media (max-width: 520px) {
   .palette-board,
   .stats-grid,
-  .card-grid {
+  .card-grid,
+  .dashboard-course-grid,
+  .enrollment-card-head,
+  .enrollment-card-summary {
     grid-template-columns: 1fr;
   }
 
