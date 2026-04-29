@@ -79,6 +79,8 @@ const InstructorDashboardPage = () => {
   const [openLearnSubmitting, setOpenLearnSubmitting] = useState(false);
   const [editingCourseId, setEditingCourseId] = useState("");
   const [editingBlogId, setEditingBlogId] = useState("");
+  const [courseDrawerTab, setCourseDrawerTab] = useState("create");
+  const [blogDrawerTab, setBlogDrawerTab] = useState("create");
 
   const accessibleTopics = useMemo(
     () => readiness.filter((item) => item.contributionAccess).map((item) => item.topic),
@@ -86,6 +88,14 @@ const InstructorDashboardPage = () => {
   );
   const hasUploadAccess = accessibleTopics.length > 0;
   const contributorAccess = creatorDashboard?.contributorAccess;
+
+  const isMyCourse = (course) =>
+    String(course.instructor?._id || course.instructor) === String(user?._id);
+  const isMyBlog = (blog) =>
+    String(blog.author?._id || blog.author) === String(user?._id);
+
+  const myCourses = useMemo(() => courses.filter(isMyCourse), [courses, user]);
+  const myBlogs = useMemo(() => blogs.filter(isMyBlog), [blogs, user]);
 
   const loadInstructorData = async () => {
     const [
@@ -268,7 +278,8 @@ const InstructorDashboardPage = () => {
       });
 
       const formData = new FormData();
-      formData.append("fullName", openLearnForm.fullName);
+      const fullName = openLearnForm.fullName || user?.name || "Learner";
+      formData.append("fullName", fullName);
       formData.append("phone", openLearnForm.phone);
       formData.append("currentRole", openLearnForm.currentRole);
       formData.append("yearsOfExperience", String(Number(openLearnForm.yearsOfExperience)));
@@ -346,6 +357,329 @@ const InstructorDashboardPage = () => {
     });
   };
 
+  const [drawerView, setDrawerView] = useState(null);
+
+  const openDrawer = (view) => () => setDrawerView(view);
+  const closeDrawer = () => setDrawerView(null);
+
+  const renderDrawerHeader = () => {
+    switch (drawerView) {
+      case "resume":
+        return { label: "Resume route", title: "Upload resume" };
+      case "course":
+        return { label: "Course tools", title: "Manage courses" };
+      case "blog":
+        return { label: "Blog tools", title: "Manage blogs" };
+      default:
+        return { label: "", title: "" };
+    }
+  };
+
+  const drawerHeader = renderDrawerHeader();
+
+  const renderDrawerContent = () => {
+    if (drawerView === "resume") {
+      return (
+        <form className="panel creator-form-panel drawer-form" onSubmit={handleOpenLearnSubmit}>
+          {openLearnMessage ? <div className={openLearnMessage.tone}>{openLearnMessage.text}</div> : null}
+          <input
+            placeholder="Full name"
+            value={openLearnForm.fullName}
+            onChange={(event) =>
+              setOpenLearnForm({ ...openLearnForm, fullName: event.target.value })
+            }
+          />
+          <input
+            placeholder="Current role"
+            value={openLearnForm.currentRole}
+            onChange={(event) =>
+              setOpenLearnForm({ ...openLearnForm, currentRole: event.target.value })
+            }
+          />
+          <textarea
+            rows="4"
+            placeholder="Experience summary"
+            value={openLearnForm.experienceSummary}
+            onChange={(event) =>
+              setOpenLearnForm({ ...openLearnForm, experienceSummary: event.target.value })
+            }
+          />
+          <label className="creator-upload-field">
+            <span>Resume document</span>
+            <small>{resumeFile ? resumeFile.name : "Upload a PDF or ODT resume"}</small>
+            <input
+              type="file"
+              accept="application/pdf,.pdf,application/vnd.oasis.opendocument.text,.odt"
+              onChange={(event) => setResumeFile(event.target.files?.[0] || null)}
+            />
+          </label>
+          <button className="primary-button creator-submit" type="submit" disabled={openLearnSubmitting}>
+            {openLearnSubmitting ? "Processing..." : "Submit for review"}
+          </button>
+        </form>
+      );
+    }
+
+    if (drawerView === "course") {
+      return (
+        <div className="drawer-section-stack">
+          <div className="drawer-tabs">
+            <button
+              className={`drawer-tab ${courseDrawerTab === "create" ? "active" : ""}`}
+              type="button"
+              onClick={() => setCourseDrawerTab("create")}
+            >
+              Create Course
+            </button>
+            <button
+              className={`drawer-tab ${courseDrawerTab === "mywork" ? "active" : ""}`}
+              type="button"
+              onClick={() => setCourseDrawerTab("mywork")}
+            >
+              My Work
+            </button>
+          </div>
+
+          {courseDrawerTab === "create" ? (
+            <form className="panel creator-form-panel drawer-form" onSubmit={handleCourseSubmit}>
+              <input
+                placeholder="Course title"
+                value={courseForm.title}
+                onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })}
+              />
+              <input
+                placeholder="Subtitle"
+                value={courseForm.subtitle}
+                onChange={(event) => setCourseForm({ ...courseForm, subtitle: event.target.value })}
+              />
+              <textarea
+                rows="5"
+                placeholder="Course description"
+                value={courseForm.description}
+                onChange={(event) =>
+                  setCourseForm({ ...courseForm, description: event.target.value })
+                }
+              />
+              <input
+                placeholder="Thumbnail URL"
+                value={courseForm.thumbnailUrl}
+                onChange={(event) =>
+                  setCourseForm({ ...courseForm, thumbnailUrl: event.target.value })
+                }
+              />
+              <div className="split-row">
+                <select
+                  value={courseForm.category}
+                  onChange={(event) => setCourseForm({ ...courseForm, category: event.target.value })}
+                >
+                  {[...new Set(accessibleTopics.map((topic) => topic.category))].map((category) => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={courseForm.topicSlug}
+                  onChange={(event) =>
+                    applyTopicDefaults(event.target.value, setCourseForm, courseForm, accessibleTopics)
+                  }
+                >
+                  {accessibleTopics.map((topic) => (
+                    <option key={topic._id} value={topic.slug}>
+                      {topic.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={courseForm.level}
+                  onChange={(event) => setCourseForm({ ...courseForm, level: event.target.value })}
+                >
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                </select>
+              </div>
+              <div className="split-row">
+                <input
+                  type="number"
+                  placeholder="Price"
+                  value={courseForm.price}
+                  onChange={(event) => setCourseForm({ ...courseForm, price: event.target.value })}
+                />
+                <select
+                  value={courseForm.status}
+                  onChange={(event) => setCourseForm({ ...courseForm, status: event.target.value })}
+                >
+                  {reviewStatusOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <textarea
+                rows="4"
+                placeholder="Learning outcomes, one per line"
+                value={courseForm.learningOutcomes}
+                onChange={(event) =>
+                  setCourseForm({ ...courseForm, learningOutcomes: event.target.value })
+                }
+              />
+              <textarea
+                rows="4"
+                placeholder="Requirements, one per line"
+                value={courseForm.requirements}
+                onChange={(event) =>
+                  setCourseForm({ ...courseForm, requirements: event.target.value })
+                }
+              />
+              <button className="primary-button creator-submit" type="submit">
+                {editingCourseId ? "Update course" : "Save course"}
+              </button>
+            </form>
+          ) : (
+            <div className="panel drawer-list-panel">
+              <div className="list-stack">
+                {myCourses.length ? (
+                  myCourses.map((course) => (
+                    <div key={course._id} className="reviewable-list-card">
+                      <div className="reviewable-list-head">
+                        <div>
+                          <strong>{course.title}</strong>
+                          <p>
+                            {course.topicSlug} - {course.category}
+                          </p>
+                        </div>
+                        <span className="badge">{statusLabelMap[course.status] || course.status}</span>
+                      </div>
+                      {getReviewNotes(course) ? (
+                        <p className="review-note-inline">{getReviewNotes(course)}</p>
+                      ) : null}
+                      <button
+                        className="ghost-button"
+                        type="button"
+                        onClick={() => {
+                          startCourseEdit(course);
+                          setCourseDrawerTab("create");
+                        }}
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="state-card compact">No courses created yet.</div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (drawerView === "blog") {
+      return (
+        <div className="drawer-section-stack">
+          <div className="drawer-tabs">
+            <button
+              className={`drawer-tab ${blogDrawerTab === "create" ? "active" : ""}`}
+              type="button"
+              onClick={() => setBlogDrawerTab("create")}
+            >
+              Create Blog
+            </button>
+            <button
+              className={`drawer-tab ${blogDrawerTab === "mywork" ? "active" : ""}`}
+              type="button"
+              onClick={() => setBlogDrawerTab("mywork")}
+            >
+              My Work
+            </button>
+          </div>
+
+          {blogDrawerTab === "create" ? (
+            <form className="panel creator-form-panel drawer-form" onSubmit={handleBlogSubmit}>
+              <input
+                placeholder="Blog title"
+                value={blogForm.title}
+                onChange={(event) => setBlogForm({ ...blogForm, title: event.target.value })}
+              />
+              <input
+                placeholder="Short excerpt"
+                value={blogForm.excerpt}
+                onChange={(event) => setBlogForm({ ...blogForm, excerpt: event.target.value })}
+              />
+              <select
+                value={blogForm.topicSlug}
+                onChange={(event) => setBlogForm({ ...blogForm, topicSlug: event.target.value })}
+              >
+                {accessibleTopics.map((topic) => (
+                  <option key={topic._id} value={topic.slug}>
+                    {topic.name}
+                  </option>
+                ))}
+              </select>
+              <textarea
+                rows="8"
+                placeholder="Write your blog draft"
+                value={blogForm.content}
+                onChange={(event) => setBlogForm({ ...blogForm, content: event.target.value })}
+              />
+              <select
+                value={blogForm.status}
+                onChange={(event) => setBlogForm({ ...blogForm, status: event.target.value })}
+              >
+                {reviewStatusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <button className="primary-button creator-submit" type="submit">
+                {editingBlogId ? "Update blog" : "Save blog"}
+              </button>
+            </form>
+          ) : (
+            <div className="panel drawer-list-panel">
+              <div className="list-stack">
+                {myBlogs.length ? (
+                  myBlogs.map((blog) => (
+                    <div key={blog._id} className="reviewable-list-card">
+                      <div className="reviewable-list-head">
+                        <div>
+                          <strong>{blog.title}</strong>
+                          <p>{blog.topicSlug}</p>
+                        </div>
+                        <span className="badge">{statusLabelMap[blog.status] || blog.status}</span>
+                      </div>
+                      {getReviewNotes(blog) ? (
+                        <p className="review-note-inline">{getReviewNotes(blog)}</p>
+                      ) : null}
+                      <button
+                        className="ghost-button"
+                        type="button"
+                        onClick={() => {
+                          startBlogEdit(blog);
+                          setBlogDrawerTab("create");
+                        }}
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="state-card compact">No blog drafts yet.</div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <section className="section-stack creator-shell">
       <div className="section-header">
@@ -355,79 +689,91 @@ const InstructorDashboardPage = () => {
         </div>
       </div>
 
-      <section className="creator-hero panel">
-        <div className="creator-hero-copy">
-          <span className="eyebrow">Structured overview</span>
-          <h3>Everything important in one place</h3>
-          <p>Track access, submit content for review, and monitor feedback from one workspace.</p>
-        </div>
-        {analytics && creatorDashboard ? (
-          <div className="stats-grid creator-stats">
-            <div className="metric-card">
-              <strong>{analytics.totalCourses}</strong>
-              <span>Courses</span>
-            </div>
-            <div className="metric-card">
-              <strong>{analytics.totalEnrollments}</strong>
-              <span>Enrollments</span>
-            </div>
-            <div className="metric-card">
-              <strong>Rs. {analytics.totalRevenue}</strong>
-              <span>Revenue</span>
-            </div>
-            <div className="metric-card">
-              <strong>{creatorDashboard.creatorPerformance.creatorReputation}</strong>
-              <span>Creator reputation</span>
-            </div>
-          </div>
-        ) : null}
+      <section className="creator-actions-grid">
+        <button className="action-card" type="button" onClick={openDrawer("resume")}> 
+          <span>Upload Resume</span>
+          <p>Submit your resume and OpenLearn application.</p>
+        </button>
+        <button className="action-card" type="button" onClick={openDrawer("course")}> 
+          <span>Manage Courses</span>
+          <p>Upload and submit your course draft.</p>
+        </button>
+        <button className="action-card" type="button" onClick={openDrawer("blog")}> 
+          <span>Manage Blogs</span>
+          <p>Upload and submit your blog draft.</p>
+        </button>
       </section>
 
-      {message ? <div className="success-note">{message}</div> : null}
-
-      <section className="creator-main-grid">
-        <aside className="creator-sidebar">
-          <div className="panel">
-            <div className="creator-panel-head">
-              <div>
-                <span className="eyebrow">Access</span>
-                <h3>Contribution access</h3>
+      <div className="creator-status-grid">
+        <section className="panel creator-status-panel">
+          <div className="creator-hero-copy">
+            <span className="eyebrow">Status overview</span>
+            <h3>Everything important in one place</h3>
+            <p>Track access, approvals, and topic readiness before you publish.</p>
+          </div>
+          {analytics && creatorDashboard ? (
+            <div className="stats-grid creator-stats">
+              <div className="metric-card">
+                <strong>{analytics.totalCourses}</strong>
+                <span>Courses</span>
+              </div>
+              <div className="metric-card">
+                <strong>{analytics.totalEnrollments}</strong>
+                <span>Enrollments</span>
+              </div>
+              <div className="metric-card">
+                <strong>Rs. {analytics.totalRevenue}</strong>
+                <span>Revenue</span>
+              </div>
+              <div className="metric-card">
+                <strong>{creatorDashboard.creatorPerformance.creatorReputation}</strong>
+                <span>Reputation</span>
               </div>
             </div>
-            {contributorAccess ? (
-              <div className="list-stack">
-                <div className="creator-access-card">
-                  <div>
-                    <strong>OpenLearn email</strong>
-                    <p>
-                      {contributorAccess.hasOpenLearnEmail
-                        ? "Your account already has platform-wide contributor access."
-                        : "Use an @openlearn.com email for instant contributor access."}
-                    </p>
-                  </div>
-                  <span className="badge">
-                    {contributorAccess.hasOpenLearnEmail ? "Active" : "Inactive"}
-                  </span>
-                </div>
-                <div className="creator-access-card">
-                  <div>
-                    <strong>Resume-approved topics</strong>
-                    <p>
-                      {contributorAccess.approvedTopics.length
-                        ? contributorAccess.approvedTopics.join(", ")
-                        : "No topics approved from resume review yet."}
-                    </p>
-                  </div>
-                  <span className="badge">{contributorAccess.openLearnApplicationStatus}</span>
-                </div>
-                {contributorAccess.analysisSummary ? (
-                  <div className="success-note">{contributorAccess.analysisSummary}</div>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
+          ) : null}
+        </section>
 
-          <div className="panel">
+        <section className="panel creator-access-panel">
+          <div className="creator-panel-head">
+            <div>
+              <span className="eyebrow">Access</span>
+              <h3>Contribution access</h3>
+            </div>
+          </div>
+          {contributorAccess ? (
+            <div className="list-stack">
+              <div className="creator-access-card">
+                <div>
+                  <strong>OpenLearn email</strong>
+                  <p>
+                    {contributorAccess.hasOpenLearnEmail
+                      ? "Your account already has platform-wide contributor access."
+                      : "Use an @openlearn.com email for instant contributor access."}
+                  </p>
+                </div>
+                <span className="badge">
+                  {contributorAccess.hasOpenLearnEmail ? "Active" : "Inactive"}
+                </span>
+              </div>
+              <div className="creator-access-card">
+                <div>
+                  <strong>Resume-approved topics</strong>
+                  <p>
+                    {contributorAccess.approvedTopics.length
+                      ? contributorAccess.approvedTopics.join(", ")
+                      : "No topics approved from resume review yet."}
+                  </p>
+                </div>
+                <span className="badge">{contributorAccess.openLearnApplicationStatus}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="state-card compact">
+              Contributor access details are not available yet.
+            </div>
+          )}
+
+          <div className="creator-readiness-section">
             <div className="creator-panel-head">
               <div>
                 <span className="eyebrow">Readiness</span>
@@ -470,315 +816,28 @@ const InstructorDashboardPage = () => {
               ))}
             </div>
           </div>
+        </section>
+      </div>
 
-          <form className="panel creator-form-panel" onSubmit={handleOpenLearnSubmit}>
-            <div className="creator-panel-head">
-              <div>
-                <span className="eyebrow">Resume route</span>
-                <h3>OpenLearn contributor review</h3>
-              </div>
+
+      {drawerView ? <div className="drawer-overlay" onClick={closeDrawer} /> : null}
+
+      <aside className={`creator-drawer ${drawerView ? "open" : ""}`}>
+        <div className="drawer-panel">
+          <div className="drawer-head">
+            <div>
+              <span className="eyebrow">{drawerHeader.label}</span>
+              <h3>{drawerHeader.title}</h3>
             </div>
-            {openLearnMessage ? <div className={openLearnMessage.tone}>{openLearnMessage.text}</div> : null}
-            <input
-              placeholder="Full name"
-              value={openLearnForm.fullName}
-              onChange={(event) =>
-                setOpenLearnForm({ ...openLearnForm, fullName: event.target.value })
-              }
-            />
-            <input
-              placeholder="Current role"
-              value={openLearnForm.currentRole}
-              onChange={(event) =>
-                setOpenLearnForm({ ...openLearnForm, currentRole: event.target.value })
-              }
-            />
-            <textarea
-              rows="4"
-              placeholder="Experience summary"
-              value={openLearnForm.experienceSummary}
-              onChange={(event) =>
-                setOpenLearnForm({ ...openLearnForm, experienceSummary: event.target.value })
-              }
-            />
-            <label className="creator-upload-field">
-              <span>Resume document</span>
-              <small>{resumeFile ? resumeFile.name : "Upload a PDF or ODT resume"}</small>
-              <input
-                type="file"
-                accept="application/pdf,.pdf,application/vnd.oasis.opendocument.text,.odt"
-                onChange={(event) => setResumeFile(event.target.files?.[0] || null)}
-              />
-            </label>
-            <button className="primary-button creator-submit" type="submit" disabled={openLearnSubmitting}>
-              {openLearnSubmitting ? "Processing..." : "Submit for review"}
+            <button className="icon-button drawer-close" type="button" onClick={closeDrawer}>
+              ×
             </button>
-          </form>
-        </aside>
-
-        <div className="creator-content">
-          {hasUploadAccess ? (
-            <>
-              <section className="creator-section">
-                <div className="creator-section-head">
-                  <div>
-                    <span className="eyebrow">Build</span>
-                    <h3>Course publishing</h3>
-                  </div>
-                  <p>Create course drafts and send them into the reviewer queue.</p>
-                </div>
-                <div className="creator-forms-grid">
-                  <form className="panel creator-form-panel" onSubmit={handleCourseSubmit}>
-                    <div className="creator-panel-head">
-                      <div>
-                        <h3>{editingCourseId ? "Edit course" : "Create a course draft"}</h3>
-                        <p>Use one topic you already unlocked.</p>
-                      </div>
-                      {editingCourseId ? (
-                        <button className="ghost-button" type="button" onClick={resetCourseEditor}>
-                          New course
-                        </button>
-                      ) : null}
-                    </div>
-                    <input
-                      placeholder="Course title"
-                      value={courseForm.title}
-                      onChange={(event) => setCourseForm({ ...courseForm, title: event.target.value })}
-                    />
-                    <input
-                      placeholder="Subtitle"
-                      value={courseForm.subtitle}
-                      onChange={(event) => setCourseForm({ ...courseForm, subtitle: event.target.value })}
-                    />
-                    <textarea
-                      rows="5"
-                      placeholder="Course description"
-                      value={courseForm.description}
-                      onChange={(event) =>
-                        setCourseForm({ ...courseForm, description: event.target.value })
-                      }
-                    />
-                    <input
-                      placeholder="Thumbnail URL"
-                      value={courseForm.thumbnailUrl}
-                      onChange={(event) =>
-                        setCourseForm({ ...courseForm, thumbnailUrl: event.target.value })
-                      }
-                    />
-                    <div className="split-row">
-                      <select
-                        value={courseForm.category}
-                        onChange={(event) => setCourseForm({ ...courseForm, category: event.target.value })}
-                      >
-                        {[...new Set(accessibleTopics.map((topic) => topic.category))].map((category) => (
-                          <option key={category} value={category}>
-                            {category}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        value={courseForm.topicSlug}
-                        onChange={(event) =>
-                          applyTopicDefaults(event.target.value, setCourseForm, courseForm, accessibleTopics)
-                        }
-                      >
-                        {accessibleTopics.map((topic) => (
-                          <option key={topic._id} value={topic.slug}>
-                            {topic.name}
-                          </option>
-                        ))}
-                      </select>
-                      <select
-                        value={courseForm.level}
-                        onChange={(event) => setCourseForm({ ...courseForm, level: event.target.value })}
-                      >
-                        <option value="beginner">Beginner</option>
-                        <option value="intermediate">Intermediate</option>
-                        <option value="advanced">Advanced</option>
-                      </select>
-                    </div>
-                    <div className="split-row">
-                      <input
-                        type="number"
-                        placeholder="Price"
-                        value={courseForm.price}
-                        onChange={(event) => setCourseForm({ ...courseForm, price: event.target.value })}
-                      />
-                      <select
-                        value={courseForm.status}
-                        onChange={(event) => setCourseForm({ ...courseForm, status: event.target.value })}
-                      >
-                        {reviewStatusOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <textarea
-                      rows="4"
-                      placeholder="Learning outcomes, one per line"
-                      value={courseForm.learningOutcomes}
-                      onChange={(event) =>
-                        setCourseForm({ ...courseForm, learningOutcomes: event.target.value })
-                      }
-                    />
-                    <textarea
-                      rows="4"
-                      placeholder="Requirements, one per line"
-                      value={courseForm.requirements}
-                      onChange={(event) =>
-                        setCourseForm({ ...courseForm, requirements: event.target.value })
-                      }
-                    />
-                    <button className="primary-button creator-submit" type="submit">
-                      {editingCourseId ? "Update course" : "Save course"}
-                    </button>
-                  </form>
-
-                  <div className="panel">
-                    <div className="creator-panel-head">
-                      <div>
-                        <h3>Your courses</h3>
-                        <p>Courses waiting for review or already published.</p>
-                      </div>
-                    </div>
-                    <div className="list-stack">
-                      {courses.length ? (
-                        courses.map((course) => (
-                          <div key={course._id} className="reviewable-list-card">
-                            <div className="reviewable-list-head">
-                              <div>
-                                <strong>{course.title}</strong>
-                                <p>
-                                  {course.topicSlug} - {course.category}
-                                </p>
-                              </div>
-                              <span className="badge">{statusLabelMap[course.status] || course.status}</span>
-                            </div>
-                            {getReviewNotes(course) ? (
-                              <p className="review-note-inline">{getReviewNotes(course)}</p>
-                            ) : null}
-                            <button className="ghost-button" type="button" onClick={() => startCourseEdit(course)}>
-                              Edit
-                            </button>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="state-card compact">No courses created yet.</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section className="creator-section">
-                <div className="creator-section-head">
-                  <div>
-                    <span className="eyebrow">Write</span>
-                    <h3>Blog publishing</h3>
-                  </div>
-                  <p>Draft topic writeups and send them for review when they are ready.</p>
-                </div>
-                <div className="creator-forms-grid">
-                  <form className="panel creator-form-panel" onSubmit={handleBlogSubmit}>
-                    <div className="creator-panel-head">
-                      <div>
-                        <h3>{editingBlogId ? "Edit blog" : "Create a blog draft"}</h3>
-                        <p>Share topic knowledge in article form.</p>
-                      </div>
-                      {editingBlogId ? (
-                        <button className="ghost-button" type="button" onClick={resetBlogEditor}>
-                          New blog
-                        </button>
-                      ) : null}
-                    </div>
-                    <input
-                      placeholder="Blog title"
-                      value={blogForm.title}
-                      onChange={(event) => setBlogForm({ ...blogForm, title: event.target.value })}
-                    />
-                    <input
-                      placeholder="Short excerpt"
-                      value={blogForm.excerpt}
-                      onChange={(event) => setBlogForm({ ...blogForm, excerpt: event.target.value })}
-                    />
-                    <select
-                      value={blogForm.topicSlug}
-                      onChange={(event) => setBlogForm({ ...blogForm, topicSlug: event.target.value })}
-                    >
-                      {accessibleTopics.map((topic) => (
-                        <option key={topic._id} value={topic.slug}>
-                          {topic.name}
-                        </option>
-                      ))}
-                    </select>
-                    <textarea
-                      rows="8"
-                      placeholder="Write your blog draft"
-                      value={blogForm.content}
-                      onChange={(event) => setBlogForm({ ...blogForm, content: event.target.value })}
-                    />
-                    <select
-                      value={blogForm.status}
-                      onChange={(event) => setBlogForm({ ...blogForm, status: event.target.value })}
-                    >
-                      {reviewStatusOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                    <button className="primary-button creator-submit" type="submit">
-                      {editingBlogId ? "Update blog" : "Save blog"}
-                    </button>
-                  </form>
-
-                  <div className="panel">
-                    <div className="creator-panel-head">
-                      <div>
-                        <h3>Your blog drafts</h3>
-                        <p>Drafts waiting for polish, review, or revision.</p>
-                      </div>
-                    </div>
-                    <div className="list-stack">
-                      {blogs.length ? (
-                        blogs.map((blog) => (
-                          <div key={blog._id} className="reviewable-list-card">
-                            <div className="reviewable-list-head">
-                              <div>
-                                <strong>{blog.title}</strong>
-                                <p>{blog.topicSlug}</p>
-                              </div>
-                              <span className="badge">{statusLabelMap[blog.status] || blog.status}</span>
-                            </div>
-                            {getReviewNotes(blog) ? (
-                              <p className="review-note-inline">{getReviewNotes(blog)}</p>
-                            ) : null}
-                            <button className="ghost-button" type="button" onClick={() => startBlogEdit(blog)}>
-                              Edit
-                            </button>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="state-card compact">No blog drafts yet.</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </section>
-            </>
-          ) : (
-            <section className="creator-section">
-              <div className="panel creator-locked-panel">
-                <span className="eyebrow">Upload Access Required</span>
-                <h3>Creation tools appear after approval</h3>
-                <p>Course and blog upload options are shown only after you unlock contribution access in a topic.</p>
-              </div>
-            </section>
-          )}
+          </div>
+          <div className="drawer-body">
+            {renderDrawerContent()}
+          </div>
         </div>
-      </section>
+      </aside>
     </section>
   );
 };

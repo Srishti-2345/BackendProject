@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import NavBar from "./components/NavBar.jsx";
+import Footer from "./components/Footer.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import BlogDetailsPage from "./pages/BlogDetailsPage.jsx";
 import BlogsPage from "./pages/BlogsPage.jsx";
@@ -72,6 +73,7 @@ const App = () => (
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </main>
+    <Footer />
   </div>
 );
 
