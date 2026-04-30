@@ -5,6 +5,7 @@ import api from "../api/client.js";
 
 const DashboardPage = () => {
   const [enrollments, setEnrollments] = useState([]);
+  const [showAllCourses, setShowAllCourses] = useState(false);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -42,15 +43,15 @@ const DashboardPage = () => {
 
       {summary ? (
         <div className="stats-grid">
-          <div className="metric-card">
+          <div className="metric-card metric-card-compact">
             <strong>{summary.profile.streak}</strong>
             <span>Current streak</span>
           </div>
-          <div className="metric-card">
+          <div className="metric-card metric-card-compact">
             <strong>{summary.profile.topicStats.reduce((sum, item) => sum + item.xp, 0)}</strong>
             <span>Total XP</span>
           </div>
-          <div className="metric-card">
+          <div className="metric-card metric-card-compact">
             <strong>{summary.profile.topicStats.filter((item) => item.uploaderUnlocked).length}</strong>
             <span>Unlocked topics</span>
           </div>
@@ -61,14 +62,14 @@ const DashboardPage = () => {
         <div className="dashboard-grid">
           <div className="panel">
             <h3>Skill map</h3>
-            <div className="list-stack">
+            <div className="list-stack" style={{gap: '0.5rem'}}>
               {summary.profile.topicStats.length ? (
                 summary.profile.topicStats.map((item) => (
-                  <div key={item.topicSlug} className="list-item">
+                  <div key={item.topicSlug} className="list-item list-item-compact">
                     <div>
                       <strong>{item.topicSlug}</strong>
                       <p>
-                        Level {item.level} - {item.quizCompletedCount} quizzes completed
+                        Level {item.level} - {item.quizCompletedCount} quizzes
                       </p>
                     </div>
                     <Link to={`/topics/${item.topicSlug}`}>{item.xp} XP</Link>
@@ -82,10 +83,10 @@ const DashboardPage = () => {
 
           <div className="panel">
             <h3>Recent XP activity</h3>
-            <div className="list-stack">
+            <div className="list-stack" style={{gap: '0.5rem'}}>
               {summary.xpEvents.slice(0, 5).length ? (
                 summary.xpEvents.slice(0, 5).map((event) => (
-                  <div key={event._id} className="list-item">
+                  <div key={event._id} className="list-item list-item-compact">
                     <div>
                       <strong>{event.sourceType.replaceAll("_", " ")}</strong>
                       <p>{event.topicSlug}</p>
@@ -107,62 +108,40 @@ const DashboardPage = () => {
             <span className="eyebrow">Enrolled courses</span>
             <h2>Continue learning</h2>
           </div>
-          <Link className="ghost-button" to="/courses">
-            Browse courses
-          </Link>
+          {enrollments.length > 3 && !showAllCourses && (
+            <button className="ghost-button" onClick={() => setShowAllCourses(true)}>
+              See More
+            </button>
+          )}
         </div>
 
         <div className="dashboard-course-grid">
           {enrollments.length ? (
-            enrollments.map((enrollment) => {
+            (showAllCourses ? enrollments : enrollments.slice(0, 3)).map((enrollment) => {
               const totalLessons = enrollment.progress.length;
               const completedLessons = enrollment.progress.filter((item) => item.completed).length;
               const nextLesson = enrollment.progress.find((item) => !item.completed);
 
               return (
-                <article className="panel enrollment-card" key={enrollment._id}>
-                  <div className="enrollment-card-head">
-                    {enrollment.course?.thumbnailUrl ? (
-                      <img
-                        src={enrollment.course.thumbnailUrl}
-                        alt={enrollment.course?.title}
-                        className="enrollment-thumb"
-                      />
-                    ) : (
-                      <div className="enrollment-thumb enrollment-thumb-empty" />
-                    )}
-                    <div>
-                      <div className="meta-row">
-                        <span className="badge">{enrollment.course?.topicSlug || "course"}</span>
-                        <span>{enrollment.completionPercentage}%</span>
-                      </div>
-                      <h3>{enrollment.course?.title}</h3>
-                      <p>Instructor: {enrollment.course?.instructor?.name || "LearnSphere"}</p>
-                    </div>
-                  </div>
-
-                  <div className="enrollment-progress-track" aria-hidden="true">
-                    <span style={{ width: `${enrollment.completionPercentage}%` }} />
-                  </div>
-
-                  <div className="enrollment-card-summary">
-                    <div>
-                      <strong>{completedLessons}/{totalLessons}</strong>
-                      <span>lessons complete</span>
-                    </div>
-                    <div>
-                      <strong>{nextLesson?.lessonTitle || "Course complete"}</strong>
-                      <span>{nextLesson ? "Next up" : "Ready for review"}</span>
-                    </div>
-                  </div>
-
-                  <div className="button-row enrollment-card-actions">
-                    <Link className="primary-button" to={`/learn/${enrollment._id}`}>
-                      Continue Course
-                    </Link>
-                  </div>
-                </article>
-              );
+  <div className="compact-enrollment-card" key={enrollment._id} style={{display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.5rem 0', borderBottom: '1px solid #eee'}}>
+    {enrollment.course?.thumbnailUrl ? (
+      <img
+        src={enrollment.course.thumbnailUrl}
+        alt={enrollment.course?.title}
+        style={{width: 48, height: 48, borderRadius: 8, objectFit: 'cover'}}
+      />
+    ) : (
+      <div style={{width: 48, height: 48, borderRadius: 8, background: '#f0f0f0'}} />
+    )}
+    <div style={{flex: 1}}>
+      <div style={{fontWeight: 600}}>{enrollment.course?.title}</div>
+      <div style={{fontSize: 12, color: '#888'}}>Progress: {enrollment.completionPercentage}%</div>
+    </div>
+    <Link className="primary-button" style={{padding: '0.25rem 0.75rem', fontSize: 14}} to={`/learn/${enrollment._id}`}>
+      Continue
+    </Link>
+  </div>
+);
             })
           ) : (
             <div className="state-card">You have not enrolled in any courses yet.</div>

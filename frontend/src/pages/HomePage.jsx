@@ -5,7 +5,7 @@ const HomePage = () => (
     <div className="home-hero editorial-panel">
       <div className="home-hero-grid">
         <div className="hero-copy hero-copy-centered">
-          <span className="eyebrow">LearnSphere</span>
+          <span className="eyebrow">OpenLearn</span>
           <h1>Simple learning. Courses and blogs in one place.</h1>
           <p>Choose where to begin and keep the homepage clean.</p>
           <div className="button-row button-row-center">

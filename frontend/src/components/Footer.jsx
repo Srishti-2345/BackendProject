@@ -5,7 +5,7 @@ const Footer = () => (
     <div className="footer-inner footer-grid">
       <div className="footer-col footer-brand-col">
         <div className="footer-logo-block">
-          <span className="footer-logo">LearnSphere</span>
+          <span className="footer-logo">OpenLearn</span>
           <span className="footer-tagline">Learning, practice, and creator access in one place.</span>
         </div>
       </div>
@@ -33,7 +33,7 @@ const Footer = () => (
     </div>
 
     <div className="footer-bottom">
-      <div className="footer-bottom-copy">© {new Date().getFullYear()} LearnSphere. All rights reserved.</div>
+      <div className="footer-bottom-copy">© {new Date().getFullYear()} OpenLearn. All rights reserved.</div>
       <div className="footer-socials">
         <a href="#" aria-label="Facebook" className="social-icon">f</a>
         <a href="#" aria-label="Twitter" className="social-icon">t</a>

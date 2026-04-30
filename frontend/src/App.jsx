@@ -13,8 +13,10 @@ import InstructorDashboardPage from "./pages/InstructorDashboardPage.jsx";
 import LearningPage from "./pages/LearningPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import QuizStudioPage from "./pages/QuizStudioPage.jsx";
+import QuizActivePage from "./pages/QuizActivePage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
 import ReviewDashboardPage from "./pages/ReviewDashboardPage.jsx";
+import ReviewActivePage from "./pages/ReviewActivePage.jsx";
 import TopicDetailsPage from "./pages/TopicDetailsPage.jsx";
 
 const App = () => (
@@ -35,6 +37,14 @@ const App = () => (
           element={
             <ProtectedRoute allowedRoles={["student", "instructor"]}>
               <QuizStudioPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/quiz/:quizId"
+          element={
+            <ProtectedRoute allowedRoles={["student", "instructor"]}>
+              <QuizActivePage />
             </ProtectedRoute>
           }
         />
@@ -67,6 +77,14 @@ const App = () => (
           element={
             <ProtectedRoute allowedRoles={["reviewer"]}>
               <ReviewDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/review/:type/:id"
+          element={
+            <ProtectedRoute allowedRoles={["reviewer"]}>
+              <ReviewActivePage />
             </ProtectedRoute>
           }
         />

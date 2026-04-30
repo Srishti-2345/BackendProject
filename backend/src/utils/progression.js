@@ -54,6 +54,27 @@ export const awardXp = async ({ user, topicSlug, xp, sourceType, metadata = {} }
   stat.xp += xp;
   stat.level = calculateLevel(stat.xp);
 
+  // Update streak
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const lastXpDate = user.lastXpDate ? new Date(user.lastXpDate) : null;
+  
+  if (lastXpDate) {
+    lastXpDate.setHours(0, 0, 0, 0);
+    const diffTime = today - lastXpDate;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) {
+      user.streak += 1;
+    } else if (diffDays > 1) {
+      user.streak = 1;
+    }
+  } else {
+    user.streak = 1;
+  }
+  
+  user.lastXpDate = new Date();
+
   await XPEvent.create({
     user: user._id,
     topicSlug,

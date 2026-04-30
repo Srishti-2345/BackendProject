@@ -713,19 +713,19 @@ const InstructorDashboardPage = () => {
           </div>
           {analytics && creatorDashboard ? (
             <div className="stats-grid creator-stats">
-              <div className="metric-card">
+              <div className="metric-card metric-card-compact">
                 <strong>{analytics.totalCourses}</strong>
                 <span>Courses</span>
               </div>
-              <div className="metric-card">
+              <div className="metric-card metric-card-compact">
                 <strong>{analytics.totalEnrollments}</strong>
                 <span>Enrollments</span>
               </div>
-              <div className="metric-card">
+              <div className="metric-card metric-card-compact">
                 <strong>Rs. {analytics.totalRevenue}</strong>
                 <span>Revenue</span>
               </div>
-              <div className="metric-card">
+              <div className="metric-card metric-card-compact">
                 <strong>{creatorDashboard.creatorPerformance.creatorReputation}</strong>
                 <span>Reputation</span>
               </div>

@@ -8,7 +8,7 @@ const NavBar = () => {
   return (
     <header className="nav-shell">
       <Link to="/" className="brand-lockup">
-        <span className="brand-mark">LearnSphere</span>
+        <span className="brand-mark">OpenLearn</span>
         <span className="brand-subline">Where learners earn the right to teach</span>
       </Link>
 

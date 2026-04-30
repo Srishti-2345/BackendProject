@@ -32,6 +32,10 @@ html {
   scroll-behavior: smooth;
 }
 
+html, body, #root {
+  height: 100%;
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -93,9 +97,20 @@ p {
 
 .app-shell {
   position: relative;
-  min-height: 100vh;
+  min-height: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.app-shell > main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-footer {
+  margin-top: auto;
 }
 
 .nav-shell {
@@ -173,10 +188,13 @@ p {
 }
 
 .page-shell {
-  width: min(1280px, calc(100vw - 3rem));
+  width: 100%;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 2rem 0 4.5rem;
+  padding: 2rem 1rem 4rem;
   flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .app-footer {
@@ -187,9 +205,10 @@ p {
 }
 
 .footer-inner {
-  width: min(1280px, calc(100vw - 3rem));
+  width: 100%;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 3rem 0 2rem;
+  padding: 3rem 1rem 2rem;
   display: grid;
   grid-template-columns: minmax(220px, 1.25fr) repeat(3, minmax(140px, 1fr));
   gap: 2rem;
@@ -242,7 +261,7 @@ p {
 }
 
 .footer-bottom {
-  width: min(1280px, calc(100vw - 3rem));
+  width: min(1280px, calc(100vw - 2rem));
   margin: 0 auto;
   padding: 1.5rem 0 2rem;
   display: flex;
@@ -492,6 +511,7 @@ p {
   padding: clamp(1.4rem, 3vw, 2rem);
   display: grid;
   gap: 1.2rem;
+  min-height: 100%;
 }
 
 .home-hero-grid {
@@ -503,7 +523,10 @@ p {
 
 .home-minimal .home-hero-grid {
   grid-template-columns: 1fr;
-  min-height: calc(100vh - 84px);
+  min-height: calc(100vh - 120px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .home-hero .hero-copy {
@@ -516,8 +539,10 @@ p {
   max-width: 680px;
   margin: 0 auto;
   text-align: center;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  gap: 1.5rem;
+  align-content: center;
+  justify-items: center;
 }
 
 .button-row-center {
@@ -1480,7 +1505,7 @@ p {
 }
 
 .reviewer-grid {
-  grid-template-columns: minmax(320px, 0.8fr) minmax(0, 1.2fr);
+  grid-template-columns: minmax(0, 1.22fr) minmax(320px, 0.78fr);
   align-items: start;
 }
 
@@ -1495,7 +1520,7 @@ p {
 
 .quiz-studio-grid {
   display: grid;
-  grid-template-columns: minmax(320px, 0.78fr) minmax(0, 1.22fr);
+  grid-template-columns: minmax(0, 1.22fr) minmax(320px, 0.78fr);
   gap: 1.5rem;
   align-items: start;
 }
@@ -1696,6 +1721,30 @@ p {
   gap: 1rem;
   padding: 1rem 0;
   border-bottom: 1px solid rgba(48, 43, 45, 0.1);
+}
+
+.list-item-compact {
+  padding: 0.65rem 0;
+}
+
+.list-item-compact strong {
+  font-size: 0.95rem;
+}
+
+.list-item-compact p {
+  font-size: 0.82rem;
+}
+
+.metric-card-compact {
+  padding: 1rem;
+}
+
+.metric-card-compact strong {
+  font-size: 1.35rem;
+}
+
+.metric-card-compact span {
+  font-size: 0.85rem;
 }
 
 .list-item:last-child {
