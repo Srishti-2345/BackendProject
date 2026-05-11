@@ -1,9 +1,8 @@
 import BlogPost from "../models/BlogPost.js";
 import Course from "../models/Course.js";
-import CreatorApplication from "../models/CreatorApplication.js";
 import Topic from "../models/Topic.js";
 import XPEvent from "../models/XPEvent.js";
-import { getTopicContributionAccess, hasOpenLearnEmail } from "../utils/contributorAccess.js";
+import { getTopicContributionAccess } from "../utils/contributorAccess.js";
 import { getTopicStat, syncUploaderUnlock } from "../utils/progression.js";
 
 export const getTopics = async (_req, res, next) => {
@@ -30,15 +29,9 @@ export const getTopicOverview = async (req, res, next) => {
     ]);
 
     let topicProgress = null;
-    let application = null;
-
     if (req.user) {
       await syncUploaderUnlock(req.user, topic.slug);
       topicProgress = getTopicStat(req.user, topic.slug);
-      application = await CreatorApplication.findOne({
-        applicant: req.user._id,
-        topicSlug: topic.slug,
-      });
     }
 
     const access = req.user ? await getTopicContributionAccess(req.user, topic.slug) : null;
@@ -49,12 +42,10 @@ export const getTopicOverview = async (req, res, next) => {
       courses,
       blogs,
       topicProgress,
-      application,
       contributorAccess: access
         ? {
             allowed: access.allowed,
             source: access.source,
-            hasOpenLearnEmail: hasOpenLearnEmail(req.user.email),
           }
         : null,
     });

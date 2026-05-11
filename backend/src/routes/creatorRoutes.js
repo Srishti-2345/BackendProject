@@ -1,7 +1,6 @@
 import express from "express";
 
 import {
-  applyForCreator,
   applyForOpenLearnContributor,
   approveCreatorApplication,
   getCreatorDashboard,
@@ -25,7 +24,6 @@ router.patch(
   authorize("reviewer"),
   submitReviewDecision
 );
-router.post("/applications", protect, authorize("student", "instructor"), applyForCreator);
 router.post(
   "/openlearn/applications",
   protect,

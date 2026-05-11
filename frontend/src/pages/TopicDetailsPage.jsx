@@ -15,7 +15,7 @@ const TopicDetailsPage = () => {
     return <div className="state-card">Loading topic...</div>;
   }
 
-  const { topic, courses, blogs, topicProgress, application } = state;
+  const { topic, courses, blogs, topicProgress, contributorAccess } = state;
 
   return (
     <section className="section-stack">
@@ -34,12 +34,14 @@ const TopicDetailsPage = () => {
               <span>Quizzes completed</span>
             </div>
             <div className="metric-card">
-              <strong>{topicProgress.uploaderUnlocked ? "Unlocked" : "Locked"}</strong>
-              <span>Uploader status</span>
+              <strong>{contributorAccess?.allowed ? "Approved" : "Not approved"}</strong>
+              <span>Resume upload access</span>
             </div>
           </div>
         ) : null}
-        {application ? <div className="success-note">Creator application status: {application.status}</div> : null}
+        {contributorAccess?.allowed ? (
+          <div className="success-note">You can upload in this topic because it is approved from your resume.</div>
+        ) : null}
       </div>
 
       <div className="dashboard-grid">

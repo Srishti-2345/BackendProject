@@ -4,10 +4,10 @@ import CreatorApplication from "../models/CreatorApplication.js";
 import DiscussionThread from "../models/DiscussionThread.js";
 import OpenLearnApplication from "../models/OpenLearnApplication.js";
 import Topic from "../models/Topic.js";
-import { getTopicContributionAccess, hasOpenLearnEmail } from "../utils/contributorAccess.js";
+import { getApprovedResumeTopics } from "../utils/contributorAccess.js";
 import { extractTextFromDocument, getDocumentKindLabel } from "../utils/documentTextExtractor.js";
 import { reviewOpenLearnApplication } from "../utils/openLearnReview.js";
-import { awardXp, getTopicStat, syncUploaderUnlock } from "../utils/progression.js";
+import { awardXp } from "../utils/progression.js";
 
 const reviewableConfigs = {
   course: {
@@ -77,72 +77,14 @@ const formatReviewItem = (type, item, config) => ({
 export const getCreatorReadiness = async (req, res, next) => {
   try {
     const topics = await Topic.find({ isActive: true }).sort({ name: 1 });
-
-    const readiness = [];
-    for (const topic of topics) {
-      await syncUploaderUnlock(req.user, topic.slug);
-      const stat = getTopicStat(req.user, topic.slug);
-      const application = await CreatorApplication.findOne({
-        applicant: req.user._id,
-        topicSlug: topic.slug,
-      });
-
-      const access = await getTopicContributionAccess(req.user, topic.slug);
-
-      readiness.push({
-        topic,
-        stat,
-        application,
-        contributionAccess: access.allowed,
-        accessSource: access.source,
-        meetsRequirements:
-          stat.xp >= topic.uploaderRequirements.xpThreshold &&
-          stat.quizCompletedCount >= topic.uploaderRequirements.quizCompletedThreshold &&
-          stat.masteredQuizCount >= topic.uploaderRequirements.masteredQuizThreshold,
-      });
-    }
+    const approvedTopics = new Set(getApprovedResumeTopics(req.user));
+    const readiness = topics.map((topic) => ({
+      topic,
+      contributionAccess: approvedTopics.has(topic.slug),
+      accessSource: approvedTopics.has(topic.slug) ? "openlearn_resume" : null,
+    }));
 
     res.json({ success: true, readiness });
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const applyForCreator = async (req, res, next) => {
-  try {
-    const { topicSlug, statement, requestedLevel = 1 } = req.body;
-    const topic = await Topic.findOne({ slug: topicSlug });
-
-    if (!topic) {
-      const error = new Error("Topic not found");
-      error.statusCode = 404;
-      throw error;
-    }
-
-    await syncUploaderUnlock(req.user, topicSlug);
-    const stat = getTopicStat(req.user, topicSlug);
-
-    if (!stat.uploaderUnlocked) {
-      const error = new Error("You have not unlocked creator access for this topic yet");
-      error.statusCode = 403;
-      throw error;
-    }
-
-    const application = await CreatorApplication.findOneAndUpdate(
-      { applicant: req.user._id, topicSlug },
-      {
-        applicant: req.user._id,
-        topicSlug,
-        requestedLevel,
-        statement,
-        status: "approved",
-        reviewerNotes: "Auto-approved because the user unlocked contribution access with XP.",
-        applicationType: "xp_unlock",
-      },
-      { new: true, upsert: true }
-    );
-
-    res.status(201).json({ success: true, application });
   } catch (error) {
     next(error);
   }
@@ -182,7 +124,6 @@ export const getCreatorDashboard = async (req, res, next) => {
       contentPipeline,
       creatorPerformance,
       contributorAccess: {
-        hasOpenLearnEmail: hasOpenLearnEmail(req.user.email),
         openLearnApplicationStatus: req.user.contributorAccess?.openLearnApplicationStatus || "none",
         approvedTopics: req.user.contributorAccess?.approvedTopics || [],
         analysisSummary: req.user.contributorAccess?.analysisSummary || "",
@@ -252,24 +193,6 @@ export const applyForOpenLearnContributor = async (req, res, next) => {
           : "Resume needs stronger topic-specific evidence for auto-approval.",
       reviewedAt: new Date(),
     });
-
-    if (review.recommendedTopics.length) {
-      for (const topicSlug of review.recommendedTopics) {
-        await CreatorApplication.findOneAndUpdate(
-          { applicant: req.user._id, topicSlug },
-          {
-            applicant: req.user._id,
-            topicSlug,
-            requestedLevel: 1,
-            statement: `Auto-approved from OpenLearn application for ${topicSlug}.`,
-            status: "approved",
-            reviewerNotes: "Approved through OpenLearn resume analysis.",
-            applicationType: "openlearn_resume",
-          },
-          { new: true, upsert: true }
-        );
-      }
-    }
 
     const existingApprovedTopics = req.user.contributorAccess?.approvedTopics || [];
     const approvedTopics =

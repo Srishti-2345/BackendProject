@@ -27,12 +27,7 @@ const initialBlogForm = {
 
 const initialOpenLearnForm = {
   fullName: "",
-  phone: "",
   currentRole: "",
-  yearsOfExperience: 0,
-  linkedinUrl: "",
-  portfolioUrl: "",
-  education: "",
   experienceSummary: "",
 };
 
@@ -49,18 +44,11 @@ const statusLabelMap = {
   rejected: "Rejected",
 };
 
-const sourceLabelMap = {
-  openlearn_email: "OpenLearn email",
-  openlearn_resume: "Resume review",
-  xp_unlock: "XP unlock",
-  manual_review: "Manual approval",
-};
-
 const toLineBreakText = (items = []) => items.join("\n");
 const getReviewNotes = (item) => item.reviewNotes || item.feedback || "";
 
 const InstructorDashboardPage = () => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [courseForm, setCourseForm] = useState(initialCourseForm);
   const [blogForm, setBlogForm] = useState(initialBlogForm);
   const [openLearnForm, setOpenLearnForm] = useState(() => ({
@@ -72,7 +60,6 @@ const InstructorDashboardPage = () => {
   const [blogs, setBlogs] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [creatorDashboard, setCreatorDashboard] = useState(null);
-  const [readiness, setReadiness] = useState([]);
   const [topics, setTopics] = useState([]);
   const [message, setMessage] = useState("");
   const [openLearnMessage, setOpenLearnMessage] = useState(null);
@@ -81,43 +68,36 @@ const InstructorDashboardPage = () => {
   const [editingBlogId, setEditingBlogId] = useState("");
   const [courseDrawerTab, setCourseDrawerTab] = useState("create");
   const [blogDrawerTab, setBlogDrawerTab] = useState("create");
+  const [drawerView, setDrawerView] = useState(null);
 
+  const contributorAccess = creatorDashboard?.contributorAccess;
+  const approvedTopicSlugs = contributorAccess?.approvedTopics || [];
   const accessibleTopics = useMemo(
-    () => readiness.filter((item) => item.contributionAccess).map((item) => item.topic),
-    [readiness]
+    () => topics.filter((topic) => approvedTopicSlugs.includes(topic.slug)),
+    [approvedTopicSlugs, topics]
   );
   const hasUploadAccess = accessibleTopics.length > 0;
-  const contributorAccess = creatorDashboard?.contributorAccess;
 
   const isMyCourse = (course) =>
-    String(course.instructor?._id || course.instructor) === String(user?._id);
-  const isMyBlog = (blog) =>
-    String(blog.author?._id || blog.author) === String(user?._id);
+    String(course.instructor?._id || course.instructor) === String(user?._id || user?.id);
+  const isMyBlog = (blog) => String(blog.author?._id || blog.author) === String(user?._id || user?.id);
 
   const myCourses = useMemo(() => courses.filter(isMyCourse), [courses, user]);
   const myBlogs = useMemo(() => blogs.filter(isMyBlog), [blogs, user]);
 
   const loadInstructorData = async () => {
-    const [
-      coursesResponse,
-      analyticsResponse,
-      creatorDashboardResponse,
-      readinessResponse,
-      topicsResponse,
-      blogsResponse,
-    ] = await Promise.all([
-      api.get("/courses/instructor/me"),
-      api.get("/courses/instructor/analytics"),
-      api.get("/creator/dashboard"),
-      api.get("/creator/readiness"),
-      api.get("/topics"),
-      api.get("/blogs/me"),
-    ]);
+    const [coursesResponse, analyticsResponse, creatorDashboardResponse, topicsResponse, blogsResponse] =
+      await Promise.all([
+        api.get("/courses/instructor/me"),
+        api.get("/courses/instructor/analytics"),
+        api.get("/creator/dashboard"),
+        api.get("/topics"),
+        api.get("/blogs/me"),
+      ]);
 
     setCourses(coursesResponse.data.courses);
     setAnalytics(analyticsResponse.data.analytics);
     setCreatorDashboard(creatorDashboardResponse.data);
-    setReadiness(readinessResponse.data.readiness);
     setTopics(topicsResponse.data.topics);
     setBlogs(blogsResponse.data.blogs);
   };
@@ -136,25 +116,12 @@ const InstructorDashboardPage = () => {
   }, [user]);
 
   useEffect(() => {
-    if (!topics.length) {
-      return;
-    }
-
-    const selectedTopic = topics.find((topic) => topic.slug === courseForm.topicSlug);
-    if (selectedTopic && selectedTopic.category !== courseForm.category) {
-      setCourseForm((current) => ({
-        ...current,
-        category: selectedTopic.category,
-      }));
-    }
-  }, [topics, courseForm.topicSlug, courseForm.category]);
-
-  useEffect(() => {
     if (!accessibleTopics.length) {
       return;
     }
 
     const firstTopic = accessibleTopics[0];
+
     if (!accessibleTopics.some((topic) => topic.slug === courseForm.topicSlug)) {
       setCourseForm((current) => ({
         ...current,
@@ -181,8 +148,8 @@ const InstructorDashboardPage = () => {
     setEditingBlogId("");
   };
 
-  const applyTopicDefaults = (topicSlug, formSetter, currentForm, availableTopics = topics) => {
-    const topic = availableTopics.find((item) => item.slug === topicSlug);
+  const applyTopicDefaults = (topicSlug, formSetter, currentForm) => {
+    const topic = accessibleTopics.find((item) => item.slug === topicSlug);
     formSetter({
       ...currentForm,
       topicSlug,
@@ -274,18 +241,12 @@ const InstructorDashboardPage = () => {
       setOpenLearnSubmitting(true);
       setOpenLearnMessage({
         tone: "state-card compact",
-        text: "Processing your resume document and matching it to topics with a free AI model. This can take a few seconds.",
+        text: "Reviewing your resume and matching it to upload topics. This can take a few seconds.",
       });
 
       const formData = new FormData();
-      const fullName = openLearnForm.fullName || user?.name || "Learner";
-      formData.append("fullName", fullName);
-      formData.append("phone", openLearnForm.phone);
+      formData.append("fullName", openLearnForm.fullName || user?.name || "Learner");
       formData.append("currentRole", openLearnForm.currentRole);
-      formData.append("yearsOfExperience", String(Number(openLearnForm.yearsOfExperience)));
-      formData.append("linkedinUrl", openLearnForm.linkedinUrl);
-      formData.append("portfolioUrl", openLearnForm.portfolioUrl);
-      formData.append("education", openLearnForm.education);
       formData.append("experienceSummary", openLearnForm.experienceSummary);
       formData.append("resume", resumeFile);
 
@@ -293,35 +254,23 @@ const InstructorDashboardPage = () => {
       const approvedTopics = data.contributorAccess?.approvedTopics || [];
 
       setOpenLearnMessage({
-        tone: "success-note",
+        tone: approvedTopics.length ? "success-note" : "error-note",
         text: approvedTopics.length
-          ? `Resume review completed. Unlocked topics: ${approvedTopics.join(", ")}.`
-          : data.application?.analysisSummary || "Resume review completed.",
+          ? `Resume review completed. You can now upload in: ${approvedTopics.join(", ")}.`
+          : data.application?.analysisSummary ||
+            "No topics were approved from this resume yet. Try a resume with clearer topic evidence.",
       });
 
       setResumeFile(null);
+      await refreshUser().catch(() => null);
       await loadInstructorData();
     } catch (error) {
       setOpenLearnMessage({
         tone: "error-note",
-        text: error.response?.data?.message || "Could not submit OpenLearn application",
+        text: error.response?.data?.message || "Could not submit resume review",
       });
     } finally {
       setOpenLearnSubmitting(false);
-    }
-  };
-
-  const applyForTopic = async (topicSlug) => {
-    try {
-      await api.post("/creator/applications", {
-        topicSlug,
-        requestedLevel: 1,
-        statement: "I have completed the learning path and want to contribute useful content.",
-      });
-      setMessage(`Contributor access granted for ${topicSlug}.`);
-      await loadInstructorData();
-    } catch (error) {
-      setMessage(error.response?.data?.message || "Could not apply for creator access");
     }
   };
 
@@ -331,7 +280,7 @@ const InstructorDashboardPage = () => {
       title: course.title || "",
       subtitle: course.subtitle || "",
       description: course.description || "",
-      category: course.category || "Web Development",
+      category: course.category || accessibleTopics[0]?.category || "Web Development",
       topicSlug: course.topicSlug || accessibleTopics[0]?.slug || "react",
       level: course.level || "beginner",
       thumbnailUrl: course.thumbnailUrl || "",
@@ -357,15 +306,13 @@ const InstructorDashboardPage = () => {
     });
   };
 
-  const [drawerView, setDrawerView] = useState(null);
-
   const openDrawer = (view) => () => setDrawerView(view);
   const closeDrawer = () => setDrawerView(null);
 
   const renderDrawerHeader = () => {
     switch (drawerView) {
       case "resume":
-        return { label: "Resume route", title: "Upload resume" };
+        return { label: "Resume review", title: "Upload resume" };
       case "course":
         return { label: "Course tools", title: "Manage courses" };
       case "blog":
@@ -375,7 +322,12 @@ const InstructorDashboardPage = () => {
     }
   };
 
-  const drawerHeader = renderDrawerHeader();
+  const renderLockedState = () => (
+    <div className="state-card compact">
+      Upload access is topic-based now. Submit your resume first, then create content only in the
+      approved topics.
+    </div>
+  );
 
   const renderDrawerContent = () => {
     if (drawerView === "resume") {
@@ -398,7 +350,7 @@ const InstructorDashboardPage = () => {
           />
           <textarea
             rows="4"
-            placeholder="Experience summary"
+            placeholder="Add a short summary of the work most relevant to the topics you want to upload in"
             value={openLearnForm.experienceSummary}
             onChange={(event) =>
               setOpenLearnForm({ ...openLearnForm, experienceSummary: event.target.value })
@@ -421,6 +373,10 @@ const InstructorDashboardPage = () => {
     }
 
     if (drawerView === "course") {
+      if (!hasUploadAccess) {
+        return renderLockedState();
+      }
+
       return (
         <div className="drawer-section-stack">
           <div className="drawer-tabs">
@@ -481,7 +437,7 @@ const InstructorDashboardPage = () => {
                 <select
                   value={courseForm.topicSlug}
                   onChange={(event) =>
-                    applyTopicDefaults(event.target.value, setCourseForm, courseForm, accessibleTopics)
+                    applyTopicDefaults(event.target.value, setCourseForm, courseForm)
                   }
                 >
                   {accessibleTopics.map((topic) => (
@@ -578,6 +534,10 @@ const InstructorDashboardPage = () => {
     }
 
     if (drawerView === "blog") {
+      if (!hasUploadAccess) {
+        return renderLockedState();
+      }
+
       return (
         <div className="drawer-section-stack">
           <div className="drawer-tabs">
@@ -680,27 +640,31 @@ const InstructorDashboardPage = () => {
     return null;
   };
 
+  const drawerHeader = renderDrawerHeader();
+
   return (
     <section className="section-stack creator-shell">
       <div className="section-header">
         <div>
           <span className="eyebrow">Creator workspace</span>
-          <h2>Manage your uploader journey</h2>
+          <h2>Upload only in your approved resume topics</h2>
         </div>
       </div>
 
+      {message ? <div className="success-note">{message}</div> : null}
+
       <section className="creator-actions-grid">
-        <button className="action-card" type="button" onClick={openDrawer("resume")}> 
+        <button className="action-card" type="button" onClick={openDrawer("resume")}>
           <span>Upload Resume</span>
-          <p>Submit your resume and OpenLearn application.</p>
+          <p>Get topic approval from your resume before creating content.</p>
         </button>
-        <button className="action-card" type="button" onClick={openDrawer("course")}> 
+        <button className="action-card" type="button" onClick={openDrawer("course")}>
           <span>Manage Courses</span>
-          <p>Upload and submit your course draft.</p>
+          <p>Create courses only in your approved topics.</p>
         </button>
-        <button className="action-card" type="button" onClick={openDrawer("blog")}> 
+        <button className="action-card" type="button" onClick={openDrawer("blog")}>
           <span>Manage Blogs</span>
-          <p>Upload and submit your blog draft.</p>
+          <p>Create blog content only in your approved topics.</p>
         </button>
       </section>
 
@@ -708,8 +672,8 @@ const InstructorDashboardPage = () => {
         <section className="panel creator-status-panel">
           <div className="creator-hero-copy">
             <span className="eyebrow">Status overview</span>
-            <h3>Everything important in one place</h3>
-            <p>Track access, approvals, and topic readiness before you publish.</p>
+            <h3>Resume approval controls upload access</h3>
+            <p>XP is no longer used for creator access. Your resume decides which topics you can publish in.</p>
           </div>
           {analytics && creatorDashboard ? (
             <div className="stats-grid creator-stats">
@@ -736,89 +700,57 @@ const InstructorDashboardPage = () => {
         <section className="panel creator-access-panel">
           <div className="creator-panel-head">
             <div>
-              <span className="eyebrow">Access</span>
-              <h3>Contribution access</h3>
+              <span className="eyebrow">Approved topics</span>
+              <h3>Your upload scope</h3>
+              <p>
+                {hasUploadAccess
+                  ? "You can upload content only in the topics listed below."
+                  : "No topics are approved yet. Upload your resume to unlock topic-based creation."}
+              </p>
             </div>
+            <span className="badge">
+              {contributorAccess?.openLearnApplicationStatus || "none"}
+            </span>
           </div>
-          {contributorAccess ? (
-            <div className="list-stack">
-              <div className="creator-access-card">
-                <div>
-                  <strong>OpenLearn email</strong>
-                  <p>
-                    {contributorAccess.hasOpenLearnEmail
-                      ? "Your account already has platform-wide contributor access."
-                      : "Use an @openlearn.com email for instant contributor access."}
-                  </p>
-                </div>
-                <span className="badge">
-                  {contributorAccess.hasOpenLearnEmail ? "Active" : "Inactive"}
-                </span>
-              </div>
-              <div className="creator-access-card">
-                <div>
-                  <strong>Resume-approved topics</strong>
-                  <p>
-                    {contributorAccess.approvedTopics.length
-                      ? contributorAccess.approvedTopics.join(", ")
-                      : "No topics approved from resume review yet."}
-                  </p>
-                </div>
-                <span className="badge">{contributorAccess.openLearnApplicationStatus}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="state-card compact">
-              Contributor access details are not available yet.
-            </div>
-          )}
 
-          <div className="creator-readiness-section">
-            <div className="creator-panel-head">
-              <div>
-                <span className="eyebrow">Readiness</span>
-                <h3>Topic unlocks</h3>
-              </div>
-            </div>
+          {hasUploadAccess ? (
             <div className="list-stack">
-              {readiness.map((item) => (
-                <div key={item.topic.slug} className="creator-readiness-card">
-                  <div className="creator-readiness-copy">
-                    <strong>{item.topic.name}</strong>
-                    <p>
-                      {item.stat.xp}/{item.topic.uploaderRequirements.xpThreshold} XP
-                    </p>
-                    <p>
-                      {item.stat.quizCompletedCount}/
-                      {item.topic.uploaderRequirements.quizCompletedThreshold} quizzes completed
-                    </p>
-                    <p>
-                      {item.stat.masteredQuizCount}/
-                      {item.topic.uploaderRequirements.masteredQuizThreshold} strong scores
-                    </p>
+              {accessibleTopics.map((topic) => (
+                <div key={topic._id} className="creator-access-card">
+                  <div>
+                    <strong>{topic.name}</strong>
+                    <p>{topic.description}</p>
                   </div>
-                  {item.contributionAccess ? (
-                    <span className="badge">{sourceLabelMap[item.accessSource] || item.accessSource}</span>
-                  ) : item.application ? (
-                    <span className="badge">{item.application.status}</span>
-                  ) : item.meetsRequirements ? (
-                    <button
-                      className="primary-button"
-                      type="button"
-                      onClick={() => applyForTopic(item.topic.slug)}
-                    >
-                      Activate
-                    </button>
-                  ) : (
-                    <span className="badge">Locked</span>
-                  )}
+                  <span className="badge">{topic.category}</span>
                 </div>
               ))}
             </div>
-          </div>
+          ) : (
+            <div className="state-card compact">
+              Your next step is just the resume review. Once topics are approved, the course and blog
+              editors will use only those topics.
+            </div>
+          )}
+
+          {contributorAccess?.analysisSummary ? (
+            <div className="creator-access-card">
+              <div>
+                <strong>Latest review summary</strong>
+                <p>{contributorAccess.analysisSummary}</p>
+              </div>
+            </div>
+          ) : null}
+
+          {contributorAccess?.reviewHighlights?.length ? (
+            <div className="creator-access-card">
+              <div>
+                <strong>Review highlights</strong>
+                <p>{contributorAccess.reviewHighlights.join(" ")}</p>
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
-
 
       {drawerView ? <div className="drawer-overlay" onClick={closeDrawer} /> : null}
 
@@ -833,9 +765,7 @@ const InstructorDashboardPage = () => {
               ×
             </button>
           </div>
-          <div className="drawer-body">
-            {renderDrawerContent()}
-          </div>
+          <div className="drawer-body">{renderDrawerContent()}</div>
         </div>
       </aside>
     </section>

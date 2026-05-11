@@ -99,6 +99,9 @@ export const updateBlogDraft = async (req, res, next) => {
       throw error;
     }
 
+    const nextTopicSlug = req.body.topicSlug || blog.topicSlug;
+    await assertTopicContributorAccess(req.user, nextTopicSlug);
+
     Object.assign(blog, req.body);
     await blog.save();
 

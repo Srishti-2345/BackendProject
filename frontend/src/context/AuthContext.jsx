@@ -11,6 +11,13 @@ export const AuthProvider = ({ children }) => {
   });
   const [loading, setLoading] = useState(true);
 
+  const refreshUser = async () => {
+    const { data } = await api.get("/auth/me");
+    setUser(data.user);
+    localStorage.setItem("learnsphere_user", JSON.stringify(data.user));
+    return data.user;
+  };
+
   useEffect(() => {
     const restoreSession = async () => {
       const token = localStorage.getItem("learnsphere_token");
@@ -20,9 +27,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        const { data } = await api.get("/auth/me");
-        setUser(data.user);
-        localStorage.setItem("learnsphere_user", JSON.stringify(data.user));
+        await refreshUser();
       } catch (_error) {
         localStorage.removeItem("learnsphere_token");
         localStorage.removeItem("learnsphere_user");
@@ -65,6 +70,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    refreshUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

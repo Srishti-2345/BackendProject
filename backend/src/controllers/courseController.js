@@ -136,6 +136,9 @@ export const updateCourse = async (req, res, next) => {
       throw error;
     }
 
+    const nextTopicSlug = req.body.topicSlug || course.topicSlug;
+    await assertTopicContributorAccess(req.user, nextTopicSlug);
+
     Object.assign(course, req.body);
     await course.save();
 
