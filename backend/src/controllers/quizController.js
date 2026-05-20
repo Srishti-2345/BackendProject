@@ -75,6 +75,8 @@ export const generateQuiz = async (req, res, next) => {
     res.status(201).json({
       success: true,
       attempt: sanitizeAttempt(attempt),
+      usedFallback: Boolean(generatedQuiz.usedFallback),
+      fallbackReason: generatedQuiz.fallbackReason || "",
     });
   } catch (error) {
     next(error);

@@ -368,18 +368,29 @@ export const generateQuizFromSource = async ({
   sourceText,
 }) => {
   try {
-    return await callFreeQuizGenerator({
+    const result = await callFreeQuizGenerator({
       topicSlug,
       questionCount,
       sourceType,
       sourceLabel,
       sourceText,
     });
+
+    return {
+      ...result,
+      usedFallback: false,
+    };
   } catch (error) {
     if (!shouldUseFallbackQuiz(error)) {
       throw error;
     }
 
-    return buildFallbackQuiz(sourceText, questionCount);
+    console.warn("Quiz generator fell back to heuristic mode:", error.message);
+
+    return {
+      ...buildFallbackQuiz(sourceText, questionCount),
+      usedFallback: true,
+      fallbackReason: error.message,
+    };
   }
 };

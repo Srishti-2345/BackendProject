@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import GoogleAuthButton from "../components/GoogleAuthButton.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
 const REVIEWER_EMAIL_DOMAIN = "chitkara.edu.in";
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { register, loginWithGoogle } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -45,6 +46,22 @@ const RegisterPage = () => {
       setError(submitError.response?.data?.message || "Registration failed");
     }
   };
+
+  const handleGoogleSignup = useCallback(
+    async (credential) => {
+      try {
+        setError("");
+        const user = await loginWithGoogle({
+          credential,
+          role: formData.role,
+        });
+        navigate(destinationByRole[user.role] || "/dashboard");
+      } catch (submitError) {
+        setError(submitError.response?.data?.message || "Google sign-up failed");
+      }
+    },
+    [destinationByRole, formData.role, loginWithGoogle, navigate]
+  );
 
   return (
     <section className="auth-shell">
@@ -93,6 +110,14 @@ const RegisterPage = () => {
           <button className="primary-button full-width" type="submit">
             Create Account
           </button>
+          <div className="auth-divider">
+            <span>or continue with</span>
+          </div>
+          <GoogleAuthButton
+            onCredential={handleGoogleSignup}
+            onError={() => setError("Google sign-up is unavailable right now")}
+            text="signup_with"
+          />
         </form>
       </div>
     </section>

@@ -6,7 +6,9 @@ const Footer = () => (
       <div className="footer-col footer-brand-col">
         <div className="footer-logo-block">
           <span className="footer-logo">OpenLearn</span>
-          <span className="footer-tagline">Learning, practice, and creator access in one place.</span>
+          <span className="footer-tagline">
+            Learning, practice, and creator access in one cinematic learning system.
+          </span>
         </div>
       </div>
 
@@ -33,12 +35,22 @@ const Footer = () => (
     </div>
 
     <div className="footer-bottom">
-      <div className="footer-bottom-copy">© {new Date().getFullYear()} OpenLearn. All rights reserved.</div>
+      <div className="footer-bottom-copy">
+        Copyright {new Date().getFullYear()} OpenLearn. All rights reserved.
+      </div>
       <div className="footer-socials">
-        <a href="#" aria-label="Facebook" className="social-icon">f</a>
-        <a href="#" aria-label="Twitter" className="social-icon">t</a>
-        <a href="#" aria-label="RSS" className="social-icon">📰</a>
-        <a href="#" aria-label="Dribbble" className="social-icon">d</a>
+        <a href="#" aria-label="Updates" className="social-icon">
+          Up
+        </a>
+        <a href="#" aria-label="Feed" className="social-icon">
+          Fd
+        </a>
+        <a href="#" aria-label="News" className="social-icon">
+          Ns
+        </a>
+        <a href="#" aria-label="Labs" className="social-icon">
+          Lb
+        </a>
       </div>
     </div>
   </footer>

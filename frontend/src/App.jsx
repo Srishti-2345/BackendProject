@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 import NavBar from "./components/NavBar.jsx";
 import Footer from "./components/Footer.jsx";
@@ -19,80 +20,95 @@ import ReviewDashboardPage from "./pages/ReviewDashboardPage.jsx";
 import ReviewActivePage from "./pages/ReviewActivePage.jsx";
 import TopicDetailsPage from "./pages/TopicDetailsPage.jsx";
 
-const App = () => (
-  <div className="app-shell">
-    <NavBar />
-    <main className="page-shell">
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/courses" element={<CoursesPage />} />
-        <Route path="/courses/:slug" element={<CourseDetailsPage />} />
-        <Route path="/blogs" element={<BlogsPage />} />
-        <Route path="/blogs/:slug" element={<BlogDetailsPage />} />
-        <Route path="/topics/:slug" element={<TopicDetailsPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route
-          path="/quiz-studio"
-          element={
-            <ProtectedRoute allowedRoles={["student", "instructor"]}>
-              <QuizStudioPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/quiz/:quizId"
-          element={
-            <ProtectedRoute allowedRoles={["student", "instructor"]}>
-              <QuizActivePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={["student", "instructor"]}>
-              <DashboardPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/learn/:enrollmentId"
-          element={
-            <ProtectedRoute allowedRoles={["student"]}>
-              <LearningPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/create"
-          element={
-            <ProtectedRoute allowedRoles={["student", "instructor"]}>
-              <InstructorDashboardPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/review"
-          element={
-            <ProtectedRoute allowedRoles={["reviewer"]}>
-              <ReviewDashboardPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/review/:type/:id"
-          element={
-            <ProtectedRoute allowedRoles={["reviewer"]}>
-              <ReviewActivePage />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </main>
-    <Footer />
-  </div>
-);
+const THEME_STORAGE_KEY = "openlearn_theme";
+
+const App = () => {
+  const [theme, setTheme] = useState(() => localStorage.getItem(THEME_STORAGE_KEY) || "dark");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((currentTheme) => (currentTheme === "dark" ? "light" : "dark"));
+  };
+
+  return (
+    <div className="app-shell">
+      <NavBar theme={theme} onToggleTheme={toggleTheme} />
+      <main className="page-shell">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/courses" element={<CoursesPage />} />
+          <Route path="/courses/:slug" element={<CourseDetailsPage />} />
+          <Route path="/blogs" element={<BlogsPage />} />
+          <Route path="/blogs/:slug" element={<BlogDetailsPage />} />
+          <Route path="/topics/:slug" element={<TopicDetailsPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route
+            path="/quiz-studio"
+            element={
+              <ProtectedRoute allowedRoles={["student", "instructor"]}>
+                <QuizStudioPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/quiz/:quizId"
+            element={
+              <ProtectedRoute allowedRoles={["student", "instructor"]}>
+                <QuizActivePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={["student", "instructor"]}>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/learn/:enrollmentId"
+            element={
+              <ProtectedRoute allowedRoles={["student"]}>
+                <LearningPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/create"
+            element={
+              <ProtectedRoute allowedRoles={["student", "instructor"]}>
+                <InstructorDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/review"
+            element={
+              <ProtectedRoute allowedRoles={["reviewer"]}>
+                <ReviewDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/review/:type/:id"
+            element={
+              <ProtectedRoute allowedRoles={["reviewer"]}>
+                <ReviewActivePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+      <Footer />
+    </div>
+  );
+};
 
 export default App;

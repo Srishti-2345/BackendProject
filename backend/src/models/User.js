@@ -17,8 +17,18 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
-      minlength: 6,
+      default: "",
+      validate: {
+        validator(value) {
+          return !value || value.length >= 6;
+        },
+        message: "Password must be at least 6 characters long.",
+      },
+    },
+    googleId: {
+      type: String,
+      default: "",
+      index: true,
     },
     role: {
       type: String,
@@ -141,11 +151,19 @@ userSchema.pre("save", async function preSave(next) {
     return next();
   }
 
+  if (!this.password) {
+    return next();
+  }
+
   this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
 userSchema.methods.comparePassword = function comparePassword(candidatePassword) {
+  if (!this.password) {
+    return false;
+  }
+
   return bcrypt.compare(candidatePassword, this.password);
 };
 

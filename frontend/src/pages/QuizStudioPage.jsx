@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import api from "../api/client.js";
@@ -67,6 +67,14 @@ const QuizStudioPage = () => {
 
       const { data } = await api.post("/quizzes/generate", formData);
       setNewQuizReady(data.attempt);
+      if (data.usedFallback) {
+        setMessage({
+          tone: "error-note",
+          text:
+            data.fallbackReason ||
+            "The AI provider could not generate a structured quiz, so a fallback quiz was created instead.",
+        });
+      }
       await loadInitialData();
     } catch (error) {
       setMessage({
@@ -92,19 +100,19 @@ const QuizStudioPage = () => {
       <div className="quiz-studio-grid">
         <section className="quiz-stage">
           {newQuizReady ? (
-            <div className="panel" style={{ textAlign: 'center', padding: '3rem' }}>
-              <span className="badge" style={{ marginBottom: '1rem' }}>Success</span>
+            <div className="panel review-content-block">
+              <span className="badge">Success</span>
               <h3>Quiz Generated Successfully!</h3>
-              <p style={{ marginBottom: '2rem' }}>{newQuizReady.sourceLabel}</p>
-              <div className="button-row" style={{ justifyContent: 'center' }}>
-                <button 
-                  className="primary-button" 
+              <p>{newQuizReady.sourceLabel}</p>
+              <div className="button-row">
+                <button
+                  className="primary-button"
                   onClick={() => navigate(`/quiz/${newQuizReady.id}`)}
                 >
                   Start Practice
                 </button>
-                <button 
-                  className="ghost-button" 
+                <button
+                  className="ghost-button"
                   onClick={() => {
                     setNewQuizReady(null);
                     setMessage({ tone: "success-note", text: "Quiz added to your history. Practice it anytime!" });

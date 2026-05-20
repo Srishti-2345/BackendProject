@@ -3,7 +3,23 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
 
-const initialCourseForm = {
+const createEmptyLesson = () => ({
+  title: "",
+  duration: "",
+  contentType: "video",
+  videoUrl: "",
+  articleUrl: "",
+  articleBody: "",
+  resourcesText: "",
+  isPreview: false,
+});
+
+const createEmptySection = () => ({
+  title: "",
+  lessons: [createEmptyLesson()],
+});
+
+const createInitialCourseForm = () => ({
   title: "",
   subtitle: "",
   description: "",
@@ -14,8 +30,9 @@ const initialCourseForm = {
   price: 0,
   learningOutcomes: "",
   requirements: "",
+  sections: [createEmptySection()],
   status: "draft",
-};
+});
 
 const initialBlogForm = {
   title: "",
@@ -45,11 +62,26 @@ const statusLabelMap = {
 };
 
 const toLineBreakText = (items = []) => items.join("\n");
+const toResourcesText = (items = []) => items.join("\n");
 const getReviewNotes = (item) => item.reviewNotes || item.feedback || "";
+const parseResourcesText = (value = "") =>
+  String(value)
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+const hasLessonContent = (lesson) =>
+  Boolean(
+    lesson.title?.trim() ||
+      lesson.duration?.trim() ||
+      lesson.videoUrl?.trim() ||
+      lesson.articleUrl?.trim() ||
+      lesson.articleBody?.trim() ||
+      lesson.resourcesText?.trim()
+  );
 
 const InstructorDashboardPage = () => {
   const { user, refreshUser } = useAuth();
-  const [courseForm, setCourseForm] = useState(initialCourseForm);
+  const [courseForm, setCourseForm] = useState(() => createInitialCourseForm());
   const [blogForm, setBlogForm] = useState(initialBlogForm);
   const [openLearnForm, setOpenLearnForm] = useState(() => ({
     ...initialOpenLearnForm,
@@ -139,7 +171,7 @@ const InstructorDashboardPage = () => {
   }, [accessibleTopics, blogForm.topicSlug, courseForm.topicSlug]);
 
   const resetCourseEditor = () => {
-    setCourseForm(initialCourseForm);
+    setCourseForm(createInitialCourseForm());
     setEditingCourseId("");
   };
 
@@ -172,18 +204,23 @@ const InstructorDashboardPage = () => {
           .split("\n")
           .map((item) => item.trim())
           .filter(Boolean),
-        sections: [
-          {
-            title: "Introduction",
-            lessons: [
-              {
-                title: "Welcome to the course",
-                duration: "05:00",
-                isPreview: true,
-              },
-            ],
-          },
-        ],
+        sections: courseForm.sections
+          .map((section) => ({
+            title: section.title,
+            lessons: section.lessons
+              .filter(hasLessonContent)
+              .map((lesson) => ({
+                title: lesson.title,
+                duration: lesson.duration,
+                contentType: lesson.contentType,
+                videoUrl: lesson.contentType === "video" ? lesson.videoUrl : "",
+                articleUrl: lesson.contentType === "article" ? lesson.articleUrl : "",
+                articleBody: lesson.contentType === "article" ? lesson.articleBody : "",
+                resources: parseResourcesText(lesson.resourcesText),
+                isPreview: lesson.isPreview,
+              })),
+          }))
+          .filter((section) => section.lessons.length),
       };
 
       if (editingCourseId) {
@@ -287,6 +324,23 @@ const InstructorDashboardPage = () => {
       price: course.price || 0,
       learningOutcomes: toLineBreakText(course.learningOutcomes),
       requirements: toLineBreakText(course.requirements),
+      sections: course.sections?.length
+        ? course.sections.map((section) => ({
+            title: section.title || "",
+            lessons: section.lessons?.length
+              ? section.lessons.map((lesson) => ({
+                  title: lesson.title || "",
+                  duration: lesson.duration || "",
+                  contentType: lesson.contentType || "video",
+                  videoUrl: lesson.videoUrl || "",
+                  articleUrl: lesson.articleUrl || "",
+                  articleBody: lesson.articleBody || "",
+                  resourcesText: toResourcesText(lesson.resources),
+                  isPreview: Boolean(lesson.isPreview),
+                }))
+              : [createEmptyLesson()],
+          }))
+        : [createEmptySection()],
       status:
         course.status === "published" || course.status === "rejected"
           ? "draft"
@@ -328,6 +382,78 @@ const InstructorDashboardPage = () => {
       approved topics.
     </div>
   );
+
+  const updateCourseSection = (sectionIndex, patch) => {
+    setCourseForm((current) => ({
+      ...current,
+      sections: current.sections.map((section, index) =>
+        index === sectionIndex ? { ...section, ...patch } : section
+      ),
+    }));
+  };
+
+  const updateCourseLesson = (sectionIndex, lessonIndex, patch) => {
+    setCourseForm((current) => ({
+      ...current,
+      sections: current.sections.map((section, index) =>
+        index === sectionIndex
+          ? {
+              ...section,
+              lessons: section.lessons.map((lesson, itemIndex) =>
+                itemIndex === lessonIndex ? { ...lesson, ...patch } : lesson
+              ),
+            }
+          : section
+      ),
+    }));
+  };
+
+  const addCourseSection = () => {
+    setCourseForm((current) => ({
+      ...current,
+      sections: [...current.sections, createEmptySection()],
+    }));
+  };
+
+  const removeCourseSection = (sectionIndex) => {
+    setCourseForm((current) => ({
+      ...current,
+      sections:
+        current.sections.length === 1
+          ? [createEmptySection()]
+          : current.sections.filter((_, index) => index !== sectionIndex),
+    }));
+  };
+
+  const addCourseLesson = (sectionIndex) => {
+    setCourseForm((current) => ({
+      ...current,
+      sections: current.sections.map((section, index) =>
+        index === sectionIndex
+          ? { ...section, lessons: [...section.lessons, createEmptyLesson()] }
+          : section
+      ),
+    }));
+  };
+
+  const removeCourseLesson = (sectionIndex, lessonIndex) => {
+    setCourseForm((current) => ({
+      ...current,
+      sections: current.sections.map((section, index) => {
+        if (index !== sectionIndex) {
+          return section;
+        }
+
+        return {
+          ...section,
+          lessons:
+            section.lessons.length === 1
+              ? [createEmptyLesson()]
+              : section.lessons.filter((_, itemIndex) => itemIndex !== lessonIndex),
+        };
+      }),
+    }));
+  };
 
   const renderDrawerContent = () => {
     if (drawerView === "resume") {
@@ -489,6 +615,169 @@ const InstructorDashboardPage = () => {
                   setCourseForm({ ...courseForm, requirements: event.target.value })
                 }
               />
+              <div className="curriculum-editor">
+                <div className="creator-panel-head curriculum-editor-head">
+                  <div>
+                    <span className="eyebrow">Curriculum</span>
+                    <h3>Build sections and lessons</h3>
+                    <p className="section-copy">
+                      The upload form now matches the same schema used when courses are displayed.
+                    </p>
+                  </div>
+                  <button className="ghost-button" type="button" onClick={addCourseSection}>
+                    Add section
+                  </button>
+                </div>
+
+                <div className="curriculum-section-stack">
+                  {courseForm.sections.map((section, sectionIndex) => (
+                    <section key={`section-${sectionIndex}`} className="curriculum-editor-section panel">
+                      <div className="creator-panel-head curriculum-section-head">
+                        <div>
+                          <span className="badge">Section {sectionIndex + 1}</span>
+                        </div>
+                        <button
+                          className="ghost-button"
+                          type="button"
+                          onClick={() => removeCourseSection(sectionIndex)}
+                        >
+                          Remove section
+                        </button>
+                      </div>
+
+                      <input
+                        placeholder="Section title"
+                        value={section.title}
+                        onChange={(event) =>
+                          updateCourseSection(sectionIndex, { title: event.target.value })
+                        }
+                      />
+
+                      <div className="curriculum-lesson-stack">
+                        {section.lessons.map((lesson, lessonIndex) => (
+                          <article
+                            key={`section-${sectionIndex}-lesson-${lessonIndex}`}
+                            className="curriculum-lesson-card"
+                          >
+                            <div className="creator-panel-head curriculum-lesson-head">
+                              <div>
+                                <span className="badge">Lesson {lessonIndex + 1}</span>
+                              </div>
+                              <button
+                                className="ghost-button"
+                                type="button"
+                                onClick={() => removeCourseLesson(sectionIndex, lessonIndex)}
+                              >
+                                Remove lesson
+                              </button>
+                            </div>
+
+                            <div className="split-row">
+                              <input
+                                placeholder="Lesson title"
+                                value={lesson.title}
+                                onChange={(event) =>
+                                  updateCourseLesson(sectionIndex, lessonIndex, {
+                                    title: event.target.value,
+                                  })
+                                }
+                              />
+                              <input
+                                placeholder="Duration (e.g. 08:30)"
+                                value={lesson.duration}
+                                onChange={(event) =>
+                                  updateCourseLesson(sectionIndex, lessonIndex, {
+                                    duration: event.target.value,
+                                  })
+                                }
+                              />
+                            </div>
+
+                            <div className="split-row">
+                              <select
+                                value={lesson.contentType}
+                                onChange={(event) =>
+                                  updateCourseLesson(sectionIndex, lessonIndex, {
+                                    contentType: event.target.value,
+                                  })
+                                }
+                              >
+                                <option value="video">Video lesson</option>
+                                <option value="article">Article lesson</option>
+                              </select>
+                              <label className="curriculum-toggle">
+                                <input
+                                  type="checkbox"
+                                  checked={lesson.isPreview}
+                                  onChange={(event) =>
+                                    updateCourseLesson(sectionIndex, lessonIndex, {
+                                      isPreview: event.target.checked,
+                                    })
+                                  }
+                                />
+                                <span>Preview lesson</span>
+                              </label>
+                            </div>
+
+                            {lesson.contentType === "video" ? (
+                              <input
+                                placeholder="Video URL"
+                                value={lesson.videoUrl}
+                                onChange={(event) =>
+                                  updateCourseLesson(sectionIndex, lessonIndex, {
+                                    videoUrl: event.target.value,
+                                  })
+                                }
+                              />
+                            ) : (
+                              <>
+                                <input
+                                  placeholder="Article URL (optional)"
+                                  value={lesson.articleUrl}
+                                  onChange={(event) =>
+                                    updateCourseLesson(sectionIndex, lessonIndex, {
+                                      articleUrl: event.target.value,
+                                    })
+                                  }
+                                />
+                                <textarea
+                                  rows="6"
+                                  placeholder="Article body"
+                                  value={lesson.articleBody}
+                                  onChange={(event) =>
+                                    updateCourseLesson(sectionIndex, lessonIndex, {
+                                      articleBody: event.target.value,
+                                    })
+                                  }
+                                />
+                              </>
+                            )}
+
+                            <textarea
+                              rows="3"
+                              placeholder="Resources, one URL per line"
+                              value={lesson.resourcesText}
+                              onChange={(event) =>
+                                updateCourseLesson(sectionIndex, lessonIndex, {
+                                  resourcesText: event.target.value,
+                                })
+                              }
+                            />
+                          </article>
+                        ))}
+                      </div>
+
+                      <button
+                        className="ghost-button curriculum-add-lesson"
+                        type="button"
+                        onClick={() => addCourseLesson(sectionIndex)}
+                      >
+                        Add lesson
+                      </button>
+                    </section>
+                  ))}
+                </div>
+              </div>
               <button className="primary-button creator-submit" type="submit">
                 {editingCourseId ? "Update course" : "Save course"}
               </button>

@@ -60,6 +60,9 @@ const CourseDetailsPage = () => {
     return <div className="state-card">{message || "Course not found"}</div>;
   }
 
+  const sections = course.sections || [];
+  const learningOutcomes = course.learningOutcomes || [];
+
   return (
     <section className="section-stack">
       <div className="details-grid">
@@ -71,32 +74,44 @@ const CourseDetailsPage = () => {
 
           <div className="panel">
             <h3>What you will learn</h3>
-            <ul className="simple-list">
-              {course.learningOutcomes.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
+            {learningOutcomes.length ? (
+              <ul className="simple-list">
+                {learningOutcomes.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ) : (
+              <div className="state-card compact">Learning outcomes will appear here.</div>
+            )}
           </div>
 
           <div className="panel">
             <h3>Course content</h3>
-            {course.sections.map((section) => (
-              <div key={section.title} className="curriculum-block">
-                <h4>{section.title}</h4>
-                <ul className="simple-list">
-                  {section.lessons.map((lesson) => (
-                    <li key={lesson.title}>
-                      {lesson.title} {lesson.duration ? `- ${lesson.duration}` : ""}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            {sections.length ? (
+              sections.map((section) => (
+                <div key={section.title} className="curriculum-block">
+                  <h4>{section.title}</h4>
+                  <ul className="simple-list">
+                    {section.lessons.map((lesson) => (
+                      <li key={lesson.title}>
+                        {lesson.title} {lesson.duration ? `- ${lesson.duration}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))
+            ) : (
+              <div className="state-card compact">Course lessons will appear here.</div>
+            )}
           </div>
         </div>
 
         <aside className="details-sidebar">
-          <img src={course.thumbnailUrl} alt={course.title} className="details-image" />
+          {course.thumbnailUrl ? (
+            <img src={course.thumbnailUrl} alt={course.title} className="details-image" />
+          ) : (
+            <div className="details-image catalog-course-media-fallback" />
+          )}
           <div className="panel sticky-panel">
             <div className="price-line">Rs. {course.price}</div>
             <button className="primary-button full-width" onClick={handleEnroll}>

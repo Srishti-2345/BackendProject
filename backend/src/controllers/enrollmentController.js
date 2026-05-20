@@ -1,13 +1,14 @@
 import Course from "../models/Course.js";
 import Enrollment from "../models/Enrollment.js";
 import Order from "../models/Order.js";
+import { normalizeCourseDocument, normalizeCourseSections } from "../utils/courseSchema.js";
 import { awardXp } from "../utils/progression.js";
 
 const buildLessonKey = ({ sectionTitle = "", lessonTitle = "" }) =>
   `${String(sectionTitle).trim()}::${String(lessonTitle).trim()}`;
 
 const createInitialProgress = (course) =>
-  course.sections.flatMap((section) =>
+  normalizeCourseSections({ sections: course.sections }).flatMap((section) =>
     section.lessons.map((lesson) => ({
       lessonTitle: lesson.title,
       completed: false,
@@ -127,6 +128,8 @@ export const getEnrollmentCourse = async (req, res, next) => {
       throw error;
     }
 
+    enrollment.course = normalizeCourseDocument(enrollment.course);
+
     const notes =
       enrollment.lessonNotes?.length
         ? enrollment.lessonNotes
@@ -204,7 +207,9 @@ export const saveEnrollmentNote = async (req, res, next) => {
       throw error;
     }
 
-    const lessonExists = enrollment.course.sections.some(
+    const normalizedCourse = normalizeCourseDocument(enrollment.course);
+
+    const lessonExists = normalizedCourse.sections.some(
       (section) =>
         section.title === sectionTitle &&
         section.lessons.some((lesson) => lesson.title === lessonTitle)
@@ -297,6 +302,7 @@ export const markLessonComplete = async (req, res, next) => {
       path: "course",
       populate: { path: "instructor", select: "name" },
     });
+    enrollment.course = normalizeCourseDocument(enrollment.course);
 
     if (completed && previousLesson && !previousLesson.completed) {
       await awardXp({

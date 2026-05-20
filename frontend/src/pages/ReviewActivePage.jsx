@@ -71,7 +71,7 @@ const ReviewActivePage = () => {
     <section className="section-stack">
       <div className="section-header">
         <div>
-          <button className="ghost-button" onClick={() => navigate("/review")} style={{ marginBottom: '1rem' }}>
+          <button className="ghost-button spacer-bottom" onClick={() => navigate("/review")}>
             Back to Queue
           </button>
           <h2>Review Submission</h2>
@@ -81,7 +81,7 @@ const ReviewActivePage = () => {
       {message ? <div className={message.tone}>{message.text}</div> : null}
 
       {activeItem ? (
-        <div className="reviewer-stage" style={{ maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
+        <div className="reviewer-stage reviewer-stage-centered">
           <div className="panel editorial-panel">
             <div className="creator-section-head">
               <div>
@@ -97,7 +97,7 @@ const ReviewActivePage = () => {
               </div>
             </div>
 
-            <div className="reviewer-summary-grid" style={{ marginTop: '1.5rem' }}>
+            <div className="reviewer-summary-grid flow-space">
               <div className="state-card compact">
                 <strong>Submitted by</strong>
                 <p>{activeItem.owner?.name || "Unknown contributor"}</p>
@@ -110,12 +110,12 @@ const ReviewActivePage = () => {
             </div>
           </div>
 
-          {activeItem.details.subtitle ? <p className="lead" style={{ padding: '0 1.4rem' }}>{activeItem.details.subtitle}</p> : null}
-          {activeItem.details.excerpt ? <p className="lead" style={{ padding: '0 1.4rem' }}>{activeItem.details.excerpt}</p> : null}
+          {activeItem.details.subtitle ? <p className="lead reviewer-stage-copy">{activeItem.details.subtitle}</p> : null}
+          {activeItem.details.excerpt ? <p className="lead reviewer-stage-copy">{activeItem.details.excerpt}</p> : null}
 
           <div className="panel review-content-block">
             {activeItem.details.description ? (
-              <div style={{ marginBottom: '1.5rem' }}>
+              <div className="spacer-bottom">
                 <h4>Description</h4>
                 <p>{activeItem.details.description}</p>
               </div>

@@ -76,7 +76,7 @@ const QuizActivePage = () => {
     <section className="section-stack">
       <div className="section-header">
         <div>
-          <button className="ghost-button" onClick={() => navigate("/quiz-studio")} style={{ marginBottom: '1rem' }}>
+          <button className="ghost-button spacer-bottom" onClick={() => navigate("/quiz-studio")}>
             Back to Studio
           </button>
           <h2>Practice Session</h2>
@@ -86,7 +86,7 @@ const QuizActivePage = () => {
       {message ? <div className={message.tone}>{message.text}</div> : null}
 
       {activeAttempt ? (
-        <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+        <div className="reviewer-stage-centered">
           <div className="panel quiz-summary-panel">
             <div className="meta-row">
               <span className="badge">{formatTopicLabel(activeAttempt.topicSlug)}</span>

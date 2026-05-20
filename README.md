@@ -19,6 +19,7 @@ LearnSphere is a MERN learning platform for courses, blogs, AI quiz practice, to
 ### Authentication
 
 - JWT-based registration and login.
+- Google account sign-in/sign-up through Google Identity Services.
 - User roles: student, instructor, and reviewer.
 - Reviewer accounts are restricted to the configured reviewer email domain.
 - Protected routes keep dashboards, learning pages, creator tools, and review tools behind authentication.

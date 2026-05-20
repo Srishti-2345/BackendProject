@@ -2,14 +2,14 @@ import { Link, NavLink } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext.jsx";
 
-const NavBar = () => {
+const NavBar = ({ theme, onToggleTheme }) => {
   const { user, logout } = useAuth();
 
   return (
     <header className="nav-shell">
       <Link to="/" className="brand-lockup">
         <span className="brand-mark">OpenLearn</span>
-        <span className="brand-subline">Where learners earn the right to teach</span>
+        <span className="brand-subline">Future-ready learning network</span>
       </Link>
 
       <nav className="nav-links">
@@ -23,6 +23,9 @@ const NavBar = () => {
       </nav>
 
       <div className="nav-actions">
+        <button className="ghost-button theme-toggle" onClick={onToggleTheme} type="button">
+          {theme === "dark" ? "Light mode" : "Dark mode"}
+        </button>
         {user ? (
           <>
             <span className="user-pill">{user.name}</span>

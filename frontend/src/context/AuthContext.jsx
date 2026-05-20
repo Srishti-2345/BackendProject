@@ -58,6 +58,12 @@ export const AuthProvider = ({ children }) => {
     return data.user;
   };
 
+  const loginWithGoogle = async (payload) => {
+    const { data } = await api.post("/auth/google", payload);
+    saveAuth(data);
+    return data.user;
+  };
+
   const logout = () => {
     localStorage.removeItem("learnsphere_token");
     localStorage.removeItem("learnsphere_user");
@@ -69,6 +75,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     register,
+    loginWithGoogle,
     logout,
     refreshUser,
   };

@@ -62,7 +62,7 @@ const DashboardPage = () => {
         <div className="dashboard-grid">
           <div className="panel">
             <h3>Skill map</h3>
-            <div className="list-stack" style={{gap: '0.5rem'}}>
+            <div className="list-stack compact-gap">
               {summary.profile.topicStats.length ? (
                 summary.profile.topicStats.map((item) => (
                   <div key={item.topicSlug} className="list-item list-item-compact">
@@ -83,7 +83,7 @@ const DashboardPage = () => {
 
           <div className="panel">
             <h3>Recent XP activity</h3>
-            <div className="list-stack" style={{gap: '0.5rem'}}>
+            <div className="list-stack compact-gap">
               {summary.xpEvents.slice(0, 5).length ? (
                 summary.xpEvents.slice(0, 5).map((event) => (
                   <div key={event._id} className="list-item list-item-compact">
@@ -118,30 +118,26 @@ const DashboardPage = () => {
         <div className="dashboard-course-grid">
           {enrollments.length ? (
             (showAllCourses ? enrollments : enrollments.slice(0, 3)).map((enrollment) => {
-              const totalLessons = enrollment.progress.length;
-              const completedLessons = enrollment.progress.filter((item) => item.completed).length;
-              const nextLesson = enrollment.progress.find((item) => !item.completed);
-
               return (
-  <div className="compact-enrollment-card" key={enrollment._id} style={{display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.5rem 0', borderBottom: '1px solid #eee'}}>
-    {enrollment.course?.thumbnailUrl ? (
-      <img
-        src={enrollment.course.thumbnailUrl}
-        alt={enrollment.course?.title}
-        style={{width: 48, height: 48, borderRadius: 8, objectFit: 'cover'}}
-      />
-    ) : (
-      <div style={{width: 48, height: 48, borderRadius: 8, background: '#f0f0f0'}} />
-    )}
-    <div style={{flex: 1}}>
-      <div style={{fontWeight: 600}}>{enrollment.course?.title}</div>
-      <div style={{fontSize: 12, color: '#888'}}>Progress: {enrollment.completionPercentage}%</div>
-    </div>
-    <Link className="primary-button" style={{padding: '0.25rem 0.75rem', fontSize: 14}} to={`/learn/${enrollment._id}`}>
-      Continue
-    </Link>
-  </div>
-);
+                <div className="compact-enrollment-card" key={enrollment._id}>
+                  {enrollment.course?.thumbnailUrl ? (
+                    <img
+                      src={enrollment.course.thumbnailUrl}
+                      alt={enrollment.course?.title}
+                      className="compact-enrollment-thumb"
+                    />
+                  ) : (
+                    <div className="compact-enrollment-thumb-empty" />
+                  )}
+                  <div className="compact-enrollment-copy">
+                    <strong>{enrollment.course?.title}</strong>
+                    <span>Progress: {enrollment.completionPercentage}%</span>
+                  </div>
+                  <Link className="primary-button" to={`/learn/${enrollment._id}`}>
+                    Continue
+                  </Link>
+                </div>
+              );
             })
           ) : (
             <div className="state-card">You have not enrolled in any courses yet.</div>

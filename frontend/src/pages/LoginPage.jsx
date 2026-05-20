@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import GoogleAuthButton from "../components/GoogleAuthButton.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
 
@@ -28,6 +29,19 @@ const LoginPage = () => {
       setError(submitError.response?.data?.message || "Login failed");
     }
   };
+
+  const handleGoogleLogin = useCallback(
+    async (credential) => {
+      try {
+        setError("");
+        const user = await loginWithGoogle({ credential });
+        navigate(destinationByRole[user.role] || "/dashboard");
+      } catch (submitError) {
+        setError(submitError.response?.data?.message || "Google sign-in failed");
+      }
+    },
+    [loginWithGoogle, navigate]
+  );
 
   return (
     <section className="auth-shell">
@@ -58,6 +72,13 @@ const LoginPage = () => {
           <button className="primary-button full-width" type="submit">
             Sign In
           </button>
+          <div className="auth-divider">
+            <span>or continue with</span>
+          </div>
+          <GoogleAuthButton
+            onCredential={handleGoogleLogin}
+            onError={() => setError("Google sign-in is unavailable right now")}
+          />
         </form>
       </div>
     </section>

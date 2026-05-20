@@ -1,23 +1,80 @@
 import { Link } from "react-router-dom";
 
+const spotlightCards = [
+  {
+    title: "Immersive course tracks",
+    description: "Explore structured paths that move from fundamentals to build-ready execution.",
+    tags: ["Guided", "Hands-on", "Progressive"],
+    link: "/courses",
+    cta: "Browse courses",
+  },
+  {
+    title: "Focused quiz studio",
+    description: "Generate practice sessions, reinforce concepts, and track topic confidence fast.",
+    tags: ["Adaptive", "Instant", "Sharpen"],
+    link: "/quiz-studio",
+    cta: "Open quiz studio",
+  },
+  {
+    title: "Editorial blog library",
+    description: "Read explainers, implementation notes, and fresh thinking from the community.",
+    tags: ["Readable", "Practical", "Curated"],
+    link: "/blogs",
+    cta: "Read blogs",
+  },
+];
+
 const HomePage = () => (
   <section className="home-minimal">
     <div className="home-hero editorial-panel">
       <div className="home-hero-grid">
         <div className="hero-copy hero-copy-centered">
           <span className="eyebrow">OpenLearn</span>
-          <h1>Simple learning. Courses and blogs in one place.</h1>
-          <p>Choose where to begin and keep the homepage clean.</p>
+          <h1>Discover the future of learning and practice.</h1>
+          <p>
+            Unlock courses, sharpen with quizzes, and move from learner to contributor
+            inside one focused platform.
+          </p>
           <div className="button-row button-row-center">
             <Link to="/courses" className="primary-button">
-              Browse Courses
+              Start learning now
             </Link>
-            <Link to="/blogs" className="ghost-button">
-              Browse Blogs
+            <Link to="/dashboard" className="ghost-button">
+              View dashboard
             </Link>
           </div>
         </div>
+
+        <div className="hero-reference-visual" aria-hidden="true">
+          <div className="hero-visual-bars">
+            <div className="hero-visual-bar" />
+            <div className="hero-visual-bar" />
+            <div className="hero-visual-bar" />
+          </div>
+          <div className="hero-visual-prism" />
+        </div>
       </div>
+    </div>
+
+    <div className="home-reference-grid">
+      {spotlightCards.map((card) => (
+        <article key={card.title} className="feature-profession-card panel">
+          <div className="section-stack">
+            <span className="badge">OpenLearn module</span>
+            <h3>{card.title}</h3>
+            <p>{card.description}</p>
+            <div className="feature-card-tags">
+              {card.tags.map((tag) => (
+                <span key={tag}>{tag}</span>
+              ))}
+            </div>
+            <Link to={card.link} className="ghost-button">
+              {card.cta}
+            </Link>
+          </div>
+          <div className="feature-card-orb" />
+        </article>
+      ))}
     </div>
   </section>
 );
