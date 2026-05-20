@@ -24,6 +24,21 @@ const spotlightCards = [
   },
 ];
 
+const heroSignalCards = [
+  {
+    label: "Structured paths",
+    sublabel: "Courses that move from basics to build-ready execution",
+  },
+  {
+    label: "Practice daily",
+    sublabel: "Quizzes that sharpen confidence topic by topic",
+  },
+  {
+    label: "Grow into creator",
+    sublabel: "Learn, prove skill, and unlock contribution",
+  },
+];
+
 const HomePage = () => (
   <section className="home-minimal">
     <div className="home-hero editorial-panel">
@@ -47,11 +62,13 @@ const HomePage = () => (
 
         <div className="hero-reference-visual" aria-hidden="true">
           <div className="hero-visual-bars">
-            <div className="hero-visual-bar" />
-            <div className="hero-visual-bar" />
-            <div className="hero-visual-bar" />
+            {heroSignalCards.map((item) => (
+              <div key={item.label} className="hero-visual-bar">
+                <strong>{item.label}</strong>
+                <span>{item.sublabel}</span>
+              </div>
+            ))}
           </div>
-          <div className="hero-visual-prism" />
         </div>
       </div>
     </div>

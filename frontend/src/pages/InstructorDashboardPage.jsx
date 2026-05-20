@@ -104,6 +104,7 @@ const InstructorDashboardPage = () => {
 
   const contributorAccess = creatorDashboard?.contributorAccess;
   const approvedTopicSlugs = contributorAccess?.approvedTopics || [];
+  const aiSuggestedTopics = contributorAccess?.aiSuggestedTopics || [];
   const accessibleTopics = useMemo(
     () => topics.filter((topic) => approvedTopicSlugs.includes(topic.slug)),
     [approvedTopicSlugs, topics]
@@ -289,11 +290,16 @@ const InstructorDashboardPage = () => {
 
       const { data } = await api.post("/creator/openlearn/applications", formData);
       const approvedTopics = data.contributorAccess?.approvedTopics || [];
+      const suggestedTopics = data.contributorAccess?.aiSuggestedTopics || [];
+      const newTopics = suggestedTopics
+        .filter((topic) => topic.isNewTopic)
+        .map((topic) => topic.name);
+      const suggestedTopicNames = suggestedTopics.map((topic) => topic.name).filter(Boolean);
 
       setOpenLearnMessage({
         tone: approvedTopics.length ? "success-note" : "error-note",
         text: approvedTopics.length
-          ? `Resume review completed. You can now upload in: ${approvedTopics.join(", ")}.`
+          ? `Resume review completed.${suggestedTopicNames.length ? ` AI suggested: ${suggestedTopicNames.join(", ")}.` : ""}${newTopics.length ? ` Added to platform: ${newTopics.join(", ")}.` : ""} You can now upload in: ${approvedTopics.join(", ")}.`
           : data.application?.analysisSummary ||
             "No topics were approved from this resume yet. Try a resume with clearer topic evidence.",
       });
@@ -1026,6 +1032,28 @@ const InstructorDashboardPage = () => {
               <div>
                 <strong>Latest review summary</strong>
                 <p>{contributorAccess.analysisSummary}</p>
+              </div>
+            </div>
+          ) : null}
+
+          {aiSuggestedTopics.length ? (
+            <div className="creator-access-card">
+              <div className="section-stack compact-gap">
+                <div>
+                  <strong>AI suggested topics</strong>
+                  <p>The resume review suggested these topics from your experience.</p>
+                </div>
+                <div className="list-stack compact-gap">
+                  {aiSuggestedTopics.map((topic) => (
+                    <div key={topic.slug} className="list-item list-item-compact">
+                      <div>
+                        <strong>{topic.name}</strong>
+                        <p>{topic.description || topic.category}</p>
+                      </div>
+                      <span className="badge">{topic.isNewTopic ? "New topic" : topic.category}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           ) : null}

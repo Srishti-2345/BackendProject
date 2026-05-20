@@ -1,5 +1,35 @@
 import mongoose from "mongoose";
 
+const aiSuggestedTopicSchema = new mongoose.Schema(
+  {
+    slug: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    category: {
+      type: String,
+      default: "General",
+      trim: true,
+    },
+    description: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    isNewTopic: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  { _id: false }
+);
+
 const personalDetailsSchema = new mongoose.Schema(
   {
     fullName: {
@@ -90,6 +120,10 @@ const openLearnApplicationSchema = new mongoose.Schema(
     },
     reviewHighlights: {
       type: [String],
+      default: [],
+    },
+    aiSuggestedTopics: {
+      type: [aiSuggestedTopicSchema],
       default: [],
     },
     reviewNotes: {

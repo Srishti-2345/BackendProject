@@ -56,6 +56,58 @@ const reviewableConfigs = {
   },
 };
 
+const buildSlug = (value = "") =>
+  String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const ensureAiSuggestedTopics = async (suggestedTopics = []) => {
+  const ensuredTopics = [];
+
+  for (const item of suggestedTopics) {
+    const normalizedName = String(item?.name || "").trim();
+    const normalizedSlug = String(item?.slug || buildSlug(normalizedName)).trim();
+
+    if (!normalizedName || !normalizedSlug) {
+      continue;
+    }
+
+    const existingTopic =
+      (await Topic.findOne({ slug: normalizedSlug })) ||
+      (await Topic.findOne({ name: normalizedName }));
+
+    if (existingTopic) {
+      ensuredTopics.push({
+        slug: existingTopic.slug,
+        name: existingTopic.name,
+        category: existingTopic.category,
+        description: existingTopic.description || "",
+        isNewTopic: false,
+      });
+      continue;
+    }
+
+    const createdTopic = await Topic.create({
+      name: normalizedName,
+      slug: normalizedSlug,
+      category: String(item?.category || "General").trim() || "General",
+      description: String(item?.description || "").trim(),
+    });
+
+    ensuredTopics.push({
+      slug: createdTopic.slug,
+      name: createdTopic.name,
+      category: createdTopic.category,
+      description: createdTopic.description || "",
+      isNewTopic: true,
+    });
+  }
+
+  return ensuredTopics;
+};
+
 const formatReviewItem = (type, item, config) => ({
   id: item._id,
   type,
@@ -128,6 +180,7 @@ export const getCreatorDashboard = async (req, res, next) => {
         approvedTopics: req.user.contributorAccess?.approvedTopics || [],
         analysisSummary: req.user.contributorAccess?.analysisSummary || "",
         reviewHighlights: req.user.contributorAccess?.reviewHighlights || [],
+        aiSuggestedTopics: req.user.contributorAccess?.aiSuggestedTopics || [],
       },
     });
   } catch (error) {
@@ -164,6 +217,14 @@ export const applyForOpenLearnContributor = async (req, res, next) => {
       resumeText,
       experienceSummary,
     });
+    const ensuredAiSuggestedTopics = await ensureAiSuggestedTopics(review.aiSuggestedTopics);
+    const finalRecommendedTopics = [
+      ...new Set([
+        ...(review.recommendedTopics || []),
+        ...ensuredAiSuggestedTopics.map((topic) => topic.slug),
+      ]),
+    ];
+    const finalStatus = finalRecommendedTopics.length ? "approved" : "rejected";
 
     const application = await OpenLearnApplication.create({
       applicant: req.user._id,
@@ -183,12 +244,13 @@ export const applyForOpenLearnContributor = async (req, res, next) => {
         size: resumeFile.size,
       },
       resumeText,
-      status: review.status,
-      recommendedTopics: review.recommendedTopics,
+      status: finalStatus,
+      recommendedTopics: finalRecommendedTopics,
       analysisSummary: review.analysisSummary,
       reviewHighlights: review.reviewHighlights,
+      aiSuggestedTopics: ensuredAiSuggestedTopics,
       reviewNotes:
-        review.status === "approved"
+        finalStatus === "approved"
           ? "Auto-approved from resume-topic matching."
           : "Resume needs stronger topic-specific evidence for auto-approval.",
       reviewedAt: new Date(),
@@ -196,19 +258,20 @@ export const applyForOpenLearnContributor = async (req, res, next) => {
 
     const existingApprovedTopics = req.user.contributorAccess?.approvedTopics || [];
     const approvedTopics =
-      review.status === "approved"
-        ? [...new Set([...existingApprovedTopics, ...review.recommendedTopics])]
+      finalStatus === "approved"
+        ? [...new Set([...existingApprovedTopics, ...finalRecommendedTopics])]
         : existingApprovedTopics;
 
     req.user.contributorAccess = {
-      openLearnApplicationStatus: review.status,
+      openLearnApplicationStatus: finalStatus,
       approvedTopics,
       analysisSummary: review.analysisSummary,
       reviewHighlights: review.reviewHighlights,
+      aiSuggestedTopics: ensuredAiSuggestedTopics,
       reviewedAt: new Date(),
     };
 
-    if (review.status === "approved" && !req.user.badges.includes("OpenLearn Contributor")) {
+    if (finalStatus === "approved" && !req.user.badges.includes("OpenLearn Contributor")) {
       req.user.badges.push("OpenLearn Contributor");
     }
 

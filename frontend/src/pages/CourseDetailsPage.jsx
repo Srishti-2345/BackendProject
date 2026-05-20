@@ -9,6 +9,8 @@ const CourseDetailsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [course, setCourse] = useState(null);
+  const [existingEnrollmentId, setExistingEnrollmentId] = useState("");
+  const [checkingEnrollment, setCheckingEnrollment] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
@@ -28,9 +30,38 @@ const CourseDetailsPage = () => {
     loadCourse();
   }, [slug]);
 
+  useEffect(() => {
+    const loadEnrollmentStatus = async () => {
+      if (!user || user.role !== "student" || !course?._id) {
+        setExistingEnrollmentId("");
+        return;
+      }
+
+      try {
+        setCheckingEnrollment(true);
+        const { data } = await api.get("/enrollments/me");
+        const existingEnrollment = (data.enrollments || []).find(
+          (item) => item.course?._id === course._id
+        );
+        setExistingEnrollmentId(existingEnrollment?._id || "");
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setCheckingEnrollment(false);
+      }
+    };
+
+    loadEnrollmentStatus();
+  }, [course?._id, user]);
+
   const handleEnroll = async () => {
     if (!user) {
       navigate("/login");
+      return;
+    }
+
+    if (existingEnrollmentId) {
+      navigate(`/learn/${existingEnrollmentId}`);
       return;
     }
 
@@ -45,6 +76,7 @@ const CourseDetailsPage = () => {
       setMessage("Enrollment successful. Opening your course...");
       const enrollmentId = confirm.data.enrollment?._id;
       if (enrollmentId) {
+        setExistingEnrollmentId(enrollmentId);
         navigate(`/learn/${enrollmentId}`);
       }
     } catch (error) {
@@ -62,6 +94,8 @@ const CourseDetailsPage = () => {
 
   const sections = course.sections || [];
   const learningOutcomes = course.learningOutcomes || [];
+  const isStudent = user?.role === "student";
+  const isEnrolled = Boolean(existingEnrollmentId);
 
   return (
     <section className="section-stack">
@@ -114,9 +148,24 @@ const CourseDetailsPage = () => {
           )}
           <div className="panel sticky-panel">
             <div className="price-line">Rs. {course.price}</div>
-            <button className="primary-button full-width" onClick={handleEnroll}>
-              Enroll Now
-            </button>
+            {isStudent && isEnrolled ? (
+              <button
+                className="ghost-button full-width enrolled-button"
+                type="button"
+                onClick={handleEnroll}
+              >
+                Enrolled
+              </button>
+            ) : (
+              <button
+                className="primary-button full-width"
+                onClick={handleEnroll}
+                disabled={checkingEnrollment}
+                type="button"
+              >
+                {checkingEnrollment ? "Checking access..." : "Enroll Now"}
+              </button>
+            )}
             <p>Instructor: {course.instructor?.name}</p>
             <p>Level: {course.level}</p>
             <p>Students: {course.enrolledCount}</p>

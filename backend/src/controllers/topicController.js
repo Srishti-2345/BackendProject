@@ -1,5 +1,6 @@
 import BlogPost from "../models/BlogPost.js";
 import Course from "../models/Course.js";
+import CreatorApplication from "../models/CreatorApplication.js";
 import Topic from "../models/Topic.js";
 import XPEvent from "../models/XPEvent.js";
 import { getTopicContributionAccess } from "../utils/contributorAccess.js";

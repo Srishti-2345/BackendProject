@@ -2,6 +2,7 @@ import { callFreeModelJson, getFreeModelSettings } from "./freeModelClient.js";
 
 const MAX_RECOMMENDED_TOPICS = 3;
 const MAX_RESUME_CHARACTERS = 16000;
+const MAX_AI_SUGGESTED_TOPICS = 5;
 
 const topicKeywordMap = {
   react: ["react", "frontend", "javascript", "jsx", "hooks", "redux", "vite", "component", "ui"],
@@ -22,6 +23,54 @@ const topicKeywordMap = {
 const countOccurrences = (source, keyword) => {
   const matches = source.match(new RegExp(keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"));
   return matches ? matches.length : 0;
+};
+
+const buildSlug = (value = "") =>
+  String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const normalizeAiSuggestedTopics = (topics = [], existingTopics = []) => {
+  const existingBySlug = new Map(existingTopics.map((topic) => [topic.slug, topic]));
+  const existingByName = new Map(
+    existingTopics.map((topic) => [String(topic.name || "").toLowerCase().trim(), topic])
+  );
+  const seen = new Set();
+
+  return topics
+    .map((item) => {
+      const rawName = typeof item === "string" ? item : item?.name;
+      const rawSlug = typeof item === "string" ? "" : item?.slug;
+      const matchedExisting =
+        existingBySlug.get(String(rawSlug || "").trim()) ||
+        existingByName.get(String(rawName || "").toLowerCase().trim());
+
+      const name = String(matchedExisting?.name || rawName || "").trim();
+      const slug = String(matchedExisting?.slug || rawSlug || buildSlug(name)).trim();
+
+      if (!name || !slug) {
+        return null;
+      }
+
+      return {
+        slug,
+        name,
+        category: String(matchedExisting?.category || item?.category || "General").trim() || "General",
+        description: String(matchedExisting?.description || item?.description || "").trim(),
+        isNewTopic: !matchedExisting,
+      };
+    })
+    .filter((item) => {
+      if (!item || seen.has(item.slug)) {
+        return false;
+      }
+
+      seen.add(item.slug);
+      return true;
+    })
+    .slice(0, MAX_AI_SUGGESTED_TOPICS);
 };
 
 const buildHeuristicReview = ({ topics, resumeText, experienceSummary = "" }) => {
@@ -52,6 +101,13 @@ const buildHeuristicReview = ({ topics, resumeText, experienceSummary = "" }) =>
     .sort((left, right) => right.score - left.score);
 
   const recommendedTopics = scoredTopics.slice(0, MAX_RECOMMENDED_TOPICS).map((topic) => topic.slug);
+  const aiSuggestedTopics = normalizeAiSuggestedTopics(
+    scoredTopics.slice(0, MAX_RECOMMENDED_TOPICS).map((topic) => ({
+      slug: topic.slug,
+      name: topic.name,
+    })),
+    topics
+  );
   const strongestTopicNames = scoredTopics
     .slice(0, MAX_RECOMMENDED_TOPICS)
     .map((topic) => topic.name);
@@ -78,6 +134,7 @@ const buildHeuristicReview = ({ topics, resumeText, experienceSummary = "" }) =>
   return {
     status,
     recommendedTopics,
+    aiSuggestedTopics,
     analysisSummary,
     reviewHighlights,
   };
@@ -96,9 +153,10 @@ const buildPrompt = ({ topics, resumeText, experienceSummary }) => {
 
   return [
     "Review this resume for topic-specific contributor access.",
-    "Choose only from the provided topics.",
+    "Use the provided topics when they fit the resume strongly.",
+    "If the resume clearly shows skill in a relevant topic that does not exist yet, you may suggest a new topic.",
     "Approve only when the resume shows credible evidence of skill, project work, teaching, or professional exposure for at least one topic.",
-    "Recommend up to three topics, ranked strongest first.",
+    "Recommend up to three existing topics and up to five total AI-suggested topics, ranked strongest first.",
     "",
     `Available topics: ${JSON.stringify(topicCatalog)}`,
     "",
@@ -119,6 +177,14 @@ Return JSON with this exact shape:
 {
   "status": "approved",
   "recommendedTopics": ["topic-slug"],
+  "aiSuggestedTopics": [
+    {
+      "name": "Topic name",
+      "slug": "topic-slug",
+      "category": "Category",
+      "description": "Short topic description"
+    }
+  ],
   "analysisSummary": "string",
   "reviewHighlights": ["string"]
 }`,
@@ -127,10 +193,12 @@ Return JSON with this exact shape:
   const normalizedTopics = Array.isArray(review.recommendedTopics)
     ? review.recommendedTopics.filter((slug) => allowedTopicSlugs.includes(slug))
     : [];
+  const normalizedAiSuggestedTopics = normalizeAiSuggestedTopics(review.aiSuggestedTopics, topics);
 
   return {
-    status: normalizedTopics.length ? review.status : "rejected",
+    status: normalizedTopics.length || normalizedAiSuggestedTopics.length ? review.status : "rejected",
     recommendedTopics: normalizedTopics,
+    aiSuggestedTopics: normalizedAiSuggestedTopics,
     analysisSummary: String(review.analysisSummary || "").trim(),
     reviewHighlights: Array.isArray(review.reviewHighlights)
       ? review.reviewHighlights.map((item) => String(item).trim()).filter(Boolean)
@@ -144,6 +212,7 @@ export const reviewOpenLearnApplication = async ({ topics, resumeText, experienc
     return {
       status: "rejected",
       recommendedTopics: [],
+      aiSuggestedTopics: [],
       analysisSummary: "No active topics are available for contributor review yet.",
       reviewHighlights: [],
     };

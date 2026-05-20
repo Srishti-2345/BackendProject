@@ -23,8 +23,16 @@ const NavBar = ({ theme, onToggleTheme }) => {
       </nav>
 
       <div className="nav-actions">
-        <button className="ghost-button theme-toggle" onClick={onToggleTheme} type="button">
-          {theme === "dark" ? "Light mode" : "Dark mode"}
+        <button
+          className={`theme-toggle ${theme === "dark" ? "theme-toggle-dark" : "theme-toggle-light"}`}
+          onClick={onToggleTheme}
+          type="button"
+          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          <span className="theme-toggle-track">
+            <span className="theme-toggle-thumb" aria-hidden="true" />
+          </span>
         </button>
         {user ? (
           <>

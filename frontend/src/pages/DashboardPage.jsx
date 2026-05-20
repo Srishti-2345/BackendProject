@@ -2,24 +2,39 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import api from "../api/client.js";
+import { getEnrollmentCompletionPercentage } from "../utils/progress.js";
 
 const DashboardPage = () => {
   const [enrollments, setEnrollments] = useState([]);
   const [showAllCourses, setShowAllCourses] = useState(false);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     const loadEnrollments = async () => {
       try {
-        const [enrollmentsResponse, summaryResponse] = await Promise.all([
+        const [enrollmentsResponse, summaryResponse] = await Promise.allSettled([
           api.get("/enrollments/me"),
           api.get("/topics/dashboard/me"),
         ]);
-        setEnrollments(enrollmentsResponse.data.enrollments);
-        setSummary(summaryResponse.data);
+
+        if (enrollmentsResponse.status === "fulfilled") {
+          setEnrollments(enrollmentsResponse.value.data.enrollments || []);
+        } else {
+          console.error(enrollmentsResponse.reason);
+          setMessage("Could not load your enrolled courses right now.");
+        }
+
+        if (summaryResponse.status === "fulfilled") {
+          setSummary(summaryResponse.value.data);
+        } else {
+          console.error(summaryResponse.reason);
+          setMessage((current) => current || "Some dashboard insights are temporarily unavailable.");
+        }
       } catch (error) {
         console.error(error);
+        setMessage("Could not load your dashboard right now.");
       } finally {
         setLoading(false);
       }
@@ -40,6 +55,8 @@ const DashboardPage = () => {
           <h2>Your learning progress</h2>
         </div>
       </div>
+
+      {message ? <div className="state-card compact">{message}</div> : null}
 
       {summary ? (
         <div className="stats-grid">
@@ -118,6 +135,8 @@ const DashboardPage = () => {
         <div className="dashboard-course-grid">
           {enrollments.length ? (
             (showAllCourses ? enrollments : enrollments.slice(0, 3)).map((enrollment) => {
+              const completionPercentage = getEnrollmentCompletionPercentage(enrollment);
+
               return (
                 <div className="compact-enrollment-card" key={enrollment._id}>
                   {enrollment.course?.thumbnailUrl ? (
@@ -131,7 +150,7 @@ const DashboardPage = () => {
                   )}
                   <div className="compact-enrollment-copy">
                     <strong>{enrollment.course?.title}</strong>
-                    <span>Progress: {enrollment.completionPercentage}%</span>
+                    <span>Progress: {completionPercentage}%</span>
                   </div>
                   <Link className="primary-button" to={`/learn/${enrollment._id}`}>
                     Continue

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import api from "../api/client.js";
+import { getEnrollmentCompletionPercentage } from "../utils/progress.js";
 
 const isYouTubeUrl = (value) => /youtube\.com\/watch\?v=|youtu\.be\//i.test(value || "");
 
@@ -185,6 +186,11 @@ const LearningPage = () => {
     [notes]
   );
 
+  const completionPercentage = useMemo(
+    () => getEnrollmentCompletionPercentage(enrollment),
+    [enrollment]
+  );
+
   const toggleLessonComplete = async () => {
     if (!activeLesson) return;
     try {
@@ -273,7 +279,7 @@ const LearningPage = () => {
 
         <div className="learning-progress">
           <strong>Progress</strong>
-          <span>{enrollment.completionPercentage}% complete</span>
+          <span>{completionPercentage}% complete</span>
         </div>
 
         <div className="learning-curriculum">
